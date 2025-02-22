@@ -1,6 +1,7 @@
 package com.climat
 
 import child_process.ExecSyncOptions
+import com.climat.library.commandParser.execute
 import com.climat.library.domain.action.JavaScriptActionValue
 import com.climat.library.domain.action.TemplateActionValue
 import com.climat.library.domain.toolchain.Toolchain
@@ -22,7 +23,7 @@ fun doExec(
     command: Array<String>,
     skipValidation: Boolean = true,
 ) {
-    com.climat.library.commandParser.execute(
+    execute(
         command,
         cliDsl,
         { command, toolchain ->

@@ -1,6 +1,7 @@
 package com.climat.library.commandParser
 
 import com.climat.library.commandParser.exception.ParameterException
+import com.climat.library.commandParser.exception.ToolchainNotDefinedException
 import com.climat.library.domain.action.ActionValueBase
 import com.climat.library.domain.action.JavaScriptActionValue
 import com.climat.library.domain.action.NoopActionValue
@@ -22,7 +23,7 @@ internal fun processToolchain(
     children = listOf(toolchain),
     passedParams = passedParams,
     upperScopeRefs = emptyMap(),
-    upperPathToRoot = emptyList(),
+    upperTraceToRoot = emptyList(),
     handler = handler,
     allowUnmatched = toolchain.allowUnmatched
 )
@@ -31,7 +32,7 @@ private fun processToolchains(
     children: List<Toolchain>,
     passedParams: MutableList<String>,
     upperScopeRefs: Map<String, RefWithAnyValue>,
-    upperPathToRoot: List<Toolchain>,
+    upperTraceToRoot: List<Toolchain>,
     handler: (parsedAction: ActionValueBase<*>, context: Toolchain) -> Unit,
     allowUnmatched: Boolean,
 ) {
@@ -46,14 +47,15 @@ private fun processToolchains(
     val toolchain = children.find {
         it.name != "_" && (it.name == next || it.aliases.any { it.name == next })
     } ?: children.find { it.name == "_" }
-        ?: throw Exception("Toolchain $next is not defined" + newLine() + getSubcommandUsageHint(upperPathToRoot))
+    ?: throw Exception("Toolchain $next is not defined" + newLine() + getSubcommandUsageHint(upperTraceToRoot))
+
     processToolchain(
         context = RefProcessingContext(
             toolchain = toolchain,
             passedParams = passedParams
         ),
         upperScopeRefs = upperScopeRefs,
-        upperPathToRoot = upperPathToRoot,
+        upperTraceToRoot = upperTraceToRoot,
         handler = handler,
     )
 }
@@ -61,17 +63,17 @@ private fun processToolchains(
 private fun processToolchain(
     context: RefProcessingContext,
     upperScopeRefs: Map<String, RefWithAnyValue>,
-    upperPathToRoot: List<Toolchain>,
+    upperTraceToRoot: List<Toolchain>,
     handler: (parsedAction: ActionValueBase<*>, context: Toolchain) -> Unit
 ) {
     val (toolchain, passedParams) = context
     log.d { "Processing toolchain: <${toolchain.name}>" }
 
-    val pathToRoot = upperPathToRoot + toolchain
-    val scopeRefs = upperScopeRefs + processRefs(context, pathToRoot)
+    val traceToRoot = upperTraceToRoot + toolchain
+    val scopeRefs = upperScopeRefs + processRefs(context, traceToRoot)
     if (passedParams.isEmpty()) {
         handleMatch(toolchain, scopeRefs, handler)
-        log.d { "Execution summary\nPath: ${pathToRoot.joinToString(" -> ") { it.name }}" }
+        log.d { "Execution summary\nPath: ${traceToRoot.joinToString(" -> ") { it.name }}" }
     } else if (toolchain.isLeaf) {
         throw Exception("Could not match $passedParams with any definition") // TODO: proper error
     } else {
@@ -79,7 +81,7 @@ private fun processToolchain(
             children = toolchain.children.toList(),
             passedParams = passedParams,
             upperScopeRefs = scopeRefs,
-            upperPathToRoot = pathToRoot,
+            upperTraceToRoot = traceToRoot,
             handler = handler,
             allowUnmatched = toolchain.allowUnmatched
         )
@@ -104,11 +106,11 @@ private fun handleMatch(
 
 private fun processRefs(
     context: RefProcessingContext,
-    pathToRoot: List<Toolchain>
+    traceToRoot: List<Toolchain>
 ): Map<String, RefWithAnyValue> = try {
     processRefs(context)
 } catch (ex: ParameterException) {
-    throw Exception(ex.message + newLine() + getParameterUsageHint(pathToRoot), ex)
+    throw Exception(ex.message + newLine() + getParameterUsageHint(traceToRoot), ex)
 }
 
 private fun setActualCommand(

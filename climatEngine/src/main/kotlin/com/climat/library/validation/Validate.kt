@@ -37,13 +37,13 @@ internal fun computeValidations(
 private fun computeValidations(
     current: Toolchain,
     sourceCode: String,
-    pathToRoot: List<Toolchain> = emptyList(),
+    traceToRoot: List<Toolchain> = emptyList(),
 ): Sequence<ValidationResult> =
     (
         validators.flatMap { validator ->
             validator.validate(
                 ValidationContext(
-                    pathToRoot = pathToRoot,
+                    traceToRoot = traceToRoot,
                     toolchain = current
                 )
             ).map {
@@ -51,7 +51,7 @@ private fun computeValidations(
             }
         } +
             current.children.flatMap {
-                computeValidations(it, sourceCode, pathToRoot + listOf(current))
+                computeValidations(it, sourceCode, traceToRoot + listOf(current))
             }
         ).asSequence()
 

@@ -12,7 +12,7 @@ internal abstract class ValidationBase {
     internal abstract fun validate(ctx: ValidationContext): Sequence<ValidationEntry>
 
     protected fun getScopeRefs(ctx: ValidationContext): Map<String, List<Ref>> =
-        (ctx.pathToRoot.flatMap { it.refs } + ctx.toolchain.refs)
+        (ctx.traceToRoot.flatMap { it.refs } + ctx.toolchain.refs)
             .groupBy { it.name }
 
     protected fun getScopeParams(ctx: ValidationContext): Map<String, List<ParamDefinition>> =

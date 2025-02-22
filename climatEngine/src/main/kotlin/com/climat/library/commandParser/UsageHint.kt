@@ -9,15 +9,15 @@ import com.climat.library.utils.newLine
 import com.climat.library.utils.newLines
 import com.climat.library.utils.tpl
 
-internal fun getParameterUsageHint(pathToRoot: List<Toolchain>): String =
-    getRequiredPlaceholders(pathToRoot) +
+internal fun getParameterUsageHint(traceToRoot: List<Toolchain>): String =
+    getRequiredPlaceholders(traceToRoot) +
     2.newLines() +
-    getParameterDescriptions(pathToRoot.last().parameters) +
+    getParameterDescriptions(traceToRoot.last().parameters) +
     newLine()
 
-internal fun getSubcommandUsageHint(pathToRoot: List<Toolchain>): String =
-    pathToRoot.last().children.let { children ->
-        getRequiredPlaceholders(pathToRoot) +
+internal fun getSubcommandUsageHint(traceToRoot: List<Toolchain>): String =
+    traceToRoot.last().children.let { children ->
+        getRequiredPlaceholders(traceToRoot) +
             children.joinToStringIfNotEmpty(separator = "|", prefix = " (", postfix = ")") { it.name } +
             children.joinToStringIfNotEmpty(newLine(), prefix = "${2.newLines()}Subcommands:${newLine()}") {
                 "${it.name} - ${it.description}"
@@ -25,8 +25,8 @@ internal fun getSubcommandUsageHint(pathToRoot: List<Toolchain>): String =
             newLine()
     }
 
-private fun getRequiredPlaceholders(pathToRoot: List<Toolchain>) =
-    "usage: ${pathToRoot.joinToString(" ") { getRequiredPlaceholder(it) }}"
+private fun getRequiredPlaceholders(traceToRoot: List<Toolchain>) =
+    "usage: ${traceToRoot.joinToString(" ") { getRequiredPlaceholder(it) }}"
 
 private fun getRequiredPlaceholder(toolchain: Toolchain) =
     toolchain.parameters.partition { it.optional }.let { (optionals, required) ->
@@ -58,9 +58,8 @@ fun getParameterDescriptions(params: Array<ParamDefinition>) =
             }
     }
 
-private fun paramDefWithDescription(it: ParamDefinition) =
+private fun paramDefWithDescription(it: ParamDefinition): String =
     ARG_PREFIX +
-    it.name +
-    "," +
-    it.shorthand.tpl { "${SHORTHAND_ARG_PREFIX}$it" } +
-    " \t\t ${it.description} "
+        it.name +
+        it.shorthand.tpl { " or ${SHORTHAND_ARG_PREFIX}$it" } +
+        " \t\t ${it.description} "
