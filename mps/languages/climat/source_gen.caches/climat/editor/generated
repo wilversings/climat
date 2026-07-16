@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<product version="3" modelHash="13gq940gjt4oz5rytoef6l388385kkf">
-  <files names="AnnotationSection_Editor.java:AnnotationSection_EditorBuilder_a.java:Annotation_Editor.java:Annotation_EditorBuilder_a.java:Constant_Editor.java:Constant_EditorBuilder_a.java:CustomScriptAction_Editor.java:CustomScriptAction_EditorBuilder_a.java:EditorAspectDescriptorImpl.java:InterpolationTemplatePiece_Editor.java:InterpolationTemplatePiece_EditorBuilder_a.java:InterpolationTemplatePiece_SubstituteMenu.java:JavaScriptAction_Editor.java:JavaScriptAction_EditorBuilder_a.java:Parameter_Editor.java:Parameter_EditorBuilder_a.java:RootToolchain_Editor.java:RootToolchain_EditorBuilder_a.java:ShellAction_Editor.java:ShellAction_EditorBuilder_a.java:StringTemplatePiece_Editor.java:StringTemplatePiece_EditorBuilder_a.java:ToolchainBody_Editor.java:ToolchainBody_EditorBuilder_a.java:ToolchainSignature_Editor.java:ToolchainSignature_EditorBuilder_a.java:Toolchain_Editor.java:Toolchain_EditorBuilder_a.java" />
-</product>
-
