@@ -22,11 +22,12 @@ class Unix : Platform() {
 
         if (Fs.pathExists(binPath).await()) return
 
-        Fs.writeFile(
-            binPath,
-            getScriptContent(name),
-            jsObjectOf("flag" to "wx"),
-        ).await()
+        Fs
+            .writeFile(
+                binPath,
+                getScriptContent(name),
+                jsObjectOf("flag" to "wx"),
+            ).await()
         Fs.chmod(binPath, FILE_PERMISSIONS).await()
 
         aliases.forEach {
@@ -43,11 +44,13 @@ class Unix : Platform() {
 
     // TODO: check if you really need platform specific implementation
     override suspend fun purge() {
-        Promise.all(
-            getInstalledToolchains().map {
-                Fs.rm(path = posix.join(climatScriptBin, it))
-            }.toTypedArray(),
-        ).await()
+        Promise
+            .all(
+                getInstalledToolchains()
+                    .map {
+                        Fs.rm(path = posix.join(climatScriptBin, it))
+                    }.toTypedArray(),
+            ).await()
 
         Fs.rm(
             UNIX_CLIMAT_HOME,

@@ -1,5 +1,5 @@
 plugins {
-    kotlin("multiplatform") version "2.0.21"
+    kotlin("multiplatform") version "2.4.10"
 }
 
 repositories {
@@ -7,7 +7,9 @@ repositories {
 }
 
 kotlin {
-    js(IR) {
+    jvmToolchain(25)
+
+    js {
         browser {
             commonWebpackConfig {
                 cssSupport {

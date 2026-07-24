@@ -6,7 +6,11 @@ import org.lighthousegames.logging.PlatformLogger
 import org.lighthousegames.logging.TagProvider
 import kotlin.js.Date
 
-class ColoredLogger(private val logLevel: LogLevelController) : Logger, TagProvider, LogLevelController by logLevel {
+class ColoredLogger(
+    private val logLevel: LogLevelController,
+) : Logger,
+    TagProvider,
+    LogLevelController by logLevel {
     private val decoratee = PlatformLogger(logLevel)
 
     override fun debug(
@@ -46,18 +50,12 @@ class ColoredLogger(private val logLevel: LogLevelController) : Logger, TagProvi
         decoratee.warn(tag, msg, t)
     }
 
-    override fun createTag(fromClass: String?): Pair<String, String> {
-        return decoratee.createTag(fromClass)
-    }
+    override fun createTag(fromClass: String?): Pair<String, String> = decoratee.createTag(fromClass)
 
     companion object {
-        private fun d2(i: Int): String {
-            return if (i < 10) "0$i" else i.toString()
-        }
+        private fun d2(i: Int): String = if (i < 10) "0$i" else i.toString()
 
-        private fun d3(i: Int): String {
-            return if (i < 100) ("0" + if (i < 10) "0" else "") + i else i.toString()
-        }
+        private fun d3(i: Int): String = if (i < 100) ("0" + if (i < 10) "0" else "") + i else i.toString()
 
         private fun preface(
             level: String,

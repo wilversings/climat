@@ -1,9 +1,9 @@
-import org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsRootPlugin
-import org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsRootPlugin.Companion.kotlinNodeJsExtension
+import org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsPlugin
+import org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsPlugin.Companion.kotlinNodeJsEnvSpec
 
 plugins {
-    kotlin("multiplatform") version "2.0.21"
-    id("org.jlleitschuh.gradle.ktlint") version "12.1.0"
+    kotlin("multiplatform") version "2.4.10"
+    id("org.jlleitschuh.gradle.ktlint") version "14.2.0"
     // id("com.dorongold.task-tree") version "2.1.1"
 }
 
@@ -20,7 +20,7 @@ allprojects {
 
 kotlin {
 
-    jvmToolchain(21)
+    jvmToolchain(25)
 
     js {
         compilations["main"].packageJson {
@@ -44,7 +44,8 @@ kotlin {
             )
         }
 
-        browser { // Not really for browser, but it is the only way to use webpack
+        // Not really for browser, but it is the only way to use webpack
+        browser {
             webpackTask {
                 mainOutputFileName.set("kotlin/climat.js")
                 output.libraryTarget = "commonjs2"
@@ -69,12 +70,12 @@ kotlin {
 
                 implementation(project("climatEngine"))
 
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
 
                 // https://github.com/Kotlin/kotlinx-nodejs/issues/16
                 implementation(files("./lib/kotlinx-nodejs-0.0.7.klib"))
 
-                implementation("org.lighthousegames:logging-js:1.3.0")
+                implementation("org.lighthousegames:logging-js:1.5.0")
             }
         }
     }
@@ -153,12 +154,12 @@ tasks {
                     <p>Redirecting to <a href="docs/">the docs</a>&hellip;</p>
                 </body>
                 </html>
-                """.trimIndent()
+                """.trimIndent(),
             )
         }
     }
 }
 
-plugins.withType<NodeJsRootPlugin> {
-    rootProject.kotlinNodeJsExtension.download = false
+plugins.withType<NodeJsPlugin> {
+    rootProject.kotlinNodeJsEnvSpec.download = false
 }

@@ -29,9 +29,10 @@ class Windows : Platform() {
 
         val aliasScript = getAliasScript(name)
 
-        Promise.all(
-            aliases.map { Fs.writeFile(getBatchFilePath(it), aliasScript) }.toTypedArray(),
-        ).await()
+        Promise
+            .all(
+                aliases.map { Fs.writeFile(getBatchFilePath(it), aliasScript) }.toTypedArray(),
+            ).await()
 
         // TODO: add path automatically
         // This requires writing to the Windows registry
@@ -49,12 +50,13 @@ class Windows : Platform() {
     }
 
     override suspend fun purge() {
-        Fs.rm(
-            WINDOWS_CLIMAT_HOME,
-            jsObjectOf(
-                "recursive" to true,
-            ),
-        ).await()
+        Fs
+            .rm(
+                WINDOWS_CLIMAT_HOME,
+                jsObjectOf(
+                    "recursive" to true,
+                ),
+            ).await()
     }
 
     private fun getBatchFilePath(name: String): String = platformPath.join(climatScriptBin, "$name.bat")

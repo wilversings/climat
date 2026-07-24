@@ -23,7 +23,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: zulu
-          java-version: 21
+          java-version: 25
       - name: Build combined GitHub Pages site
         run: ./gradlew assembleGithubPages
       - name: Upload artifact

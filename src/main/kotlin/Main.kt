@@ -25,7 +25,8 @@ fun main() =
         val toolchain = parse(MANIFEST_TEXT)
         val validations = getValidations(toolchain)
         val warnings =
-            validations.filter { it.type == Warning }
+            validations
+                .filter { it.type == Warning }
                 .joinToString(EOL) { "${it.code}: ${it.message}" }
 
         if (warnings.isNotEmpty()) {
@@ -34,7 +35,8 @@ fun main() =
         }
 
         val errors =
-            validations.filter { it.type == Error }
+            validations
+                .filter { it.type == Error }
                 .joinToString(EOL) { "${it.code}: ${it.message}" }
 
         if (errors.isNotEmpty()) {

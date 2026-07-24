@@ -24,16 +24,19 @@ abstract class Platform {
     abstract suspend fun purge()
 
     suspend fun getInstalledToolchains(): List<String> =
-        Fs.readdir(toolchainHome, jsObjectOf("withFileTypes" to true)).await()
+        Fs
+            .readdir(toolchainHome, jsObjectOf("withFileTypes" to true))
+            .await()
             .filter { it.isDirectory() }
             .map { it.name }
 
     protected suspend fun removeToolchain(name: String) {
         try {
-            Fs.rm(
-                path = platformPath.join(toolchainHome, name),
-                options = jsObjectOf("recursive" to true),
-            ).await()
+            Fs
+                .rm(
+                    path = platformPath.join(toolchainHome, name),
+                    options = jsObjectOf("recursive" to true),
+                ).await()
         } catch (ex: dynamic) {
             if (ex.code == "ENOENT") {
                 throw Exception("Toolchain named `$name` was not found")
@@ -48,18 +51,20 @@ abstract class Platform {
     ) {
         val toolchain =
             parse(
-                Fs.readFile(
-                    path = platformPath.join(toolchainHome, name, MAIN_MANIFEST_NAME),
-                    options = "utf8",
-                )
-                    .await()
+                Fs
+                    .readFile(
+                        path = platformPath.join(toolchainHome, name, MAIN_MANIFEST_NAME),
+                        options = "utf8",
+                    ).await()
                     .toString(),
             )
         val aliases = toolchain.aliases.map { it.name }
-        Promise.all(
-            aliases.map { alias -> Fs.unlink(platformPath.join(climatScriptBin, alias + nameSuffix)) }
-                .toTypedArray(),
-        ).await()
+        Promise
+            .all(
+                aliases
+                    .map { alias -> Fs.unlink(platformPath.join(climatScriptBin, alias + nameSuffix)) }
+                    .toTypedArray(),
+            ).await()
     }
 
     protected suspend fun moveManifestToClimatHome(
@@ -75,9 +80,10 @@ abstract class Platform {
         Fs.ensureDir(path = toolchainDir).await()
         Fs.chmod(path = toolchainDir, mode = FILE_PERMISSIONS).await()
 
-        Fs.writeFile(
-            path = platformPath.join(toolchainDir, MAIN_MANIFEST_NAME),
-            data = manifest,
-        ).await()
+        Fs
+            .writeFile(
+                path = platformPath.join(toolchainDir, MAIN_MANIFEST_NAME),
+                data = manifest,
+            ).await()
     }
 }

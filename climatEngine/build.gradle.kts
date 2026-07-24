@@ -1,17 +1,19 @@
 import com.strumenta.antlrkotlin.gradle.AntlrKotlinTask
 
 plugins {
-    kotlin("multiplatform") version "2.0.21"
-    id("com.strumenta.antlr-kotlin") version "1.0.1"
+    kotlin("multiplatform") version "2.4.10"
+    id("com.strumenta.antlr-kotlin") version "1.0.12"
 }
 
 kotlin {
+    jvmToolchain(25)
+
     sourceSets {
         val commonMain by getting {
             dependencies {
                 api(kotlin("stdlib-common"))
-                api("com.strumenta:antlr-kotlin-runtime:1.0.1")
-                api("org.lighthousegames:logging:1.3.0")
+                api("com.strumenta:antlr-kotlin-runtime:1.0.12")
+                api("org.lighthousegames:logging:1.5.0")
             }
             kotlin.srcDir("build/generated-src/commonAntlr/kotlin")
             kotlin.srcDir("src/main/kotlin")
@@ -25,7 +27,7 @@ kotlin {
         }
     }
 
-    js(IR) {
+    js {
         binaries.library()
         nodejs {
             testTask {
@@ -38,7 +40,7 @@ kotlin {
 
 tasks.register<AntlrKotlinTask>("generateKotlinCommonGrammarSource") {
     antlrClasspath = configurations.detachedConfiguration(
-        project.dependencies.create("com.strumenta:antlr-kotlin-runtime:1.0.0-RC1")
+        project.dependencies.create("com.strumenta:antlr-kotlin-runtime:1.0.12")
     )
     maxHeapSize = "64m"
     packageName = "climat.lang"
