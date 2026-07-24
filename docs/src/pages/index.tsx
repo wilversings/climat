@@ -1,6 +1,7 @@
 import React from 'react';
 import clsx from 'clsx';
 import Layout from '@theme/Layout';
+import useBaseUrl from '@docusaurus/useBaseUrl';
 import HomepageFeatures from '@site/src/components/HomepageFeatures';
 
 import styles from './index.module.css';
@@ -12,10 +13,10 @@ function HomepageHeader() {
         <img className="homepage-logo"
              alt="Project logo and name"
              height={200}
-             src={"/img/logo-name.svg"}/>
+             src={useBaseUrl("/img/logo-name.svg")}/>
         <img className="pre-release-tag"
               alt="Pre-Release tag"
-              src={"/img/pre-release-tag.svg"}/>
+              src={useBaseUrl("/img/pre-release-tag.svg")}/>
       </div>
     </header>
   );

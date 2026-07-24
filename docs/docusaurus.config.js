@@ -6,15 +6,31 @@ const darkCodeTheme = require('prism-react-renderer').themes.dracula;
 
 const CLIMAT = 'CLiMAT';
 
+// Overridable so the site can be built either standalone (baseUrl '/')
+// or embedded under a path as part of the combined GitHub Pages build
+// (see the root Gradle `assembleGithubPages` task, which sets this to
+// e.g. '/climat/docs/').
+const BASE_URL = process.env.DOCUSAURUS_BASE_URL || '/';
+
+// The playground is built and deployed as a sibling of docs/ by the same
+// Gradle task, e.g. docs at '/climat/docs/' and playground at
+// '/climat/playground/'. `..` lets this resolve correctly regardless of
+// the base path above (browsers normalize the '..' segment).
+const PLAYGROUND_URL = `${BASE_URL}../playground/`;
+
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: CLIMAT,
   tagline: '',
-  url: 'https://climat-project.github.io',
-  baseUrl: '/',
+  url: 'https://wilversings.github.io',
+  baseUrl: BASE_URL,
   onBrokenLinks: 'throw',
-  onBrokenMarkdownLinks: 'warn',
   favicon: 'img/logo.svg',
+  markdown: {
+    hooks: {
+      onBrokenMarkdownLinks: 'warn',
+    },
+  },
 
   // GitHub pages deployment config.
   organizationName: 'climat-project',
@@ -74,7 +90,15 @@ const config = {
 
           // TODO: write
           //{to: 'docs/coming-soon', label: 'Lib docs', position: 'left' },
-          
+
+          {
+            // The `pathname://` protocol tells Docusaurus to use this path
+            // as-is, without running it through the broken-link checker —
+            // the playground isn't a Docusaurus route, it's a sibling site.
+            href: `pathname://${PLAYGROUND_URL}`,
+            label: 'Try it out',
+            position: 'right',
+          },
           {
             href: 'https://github.com/climat-project',
             label: 'GitHub',

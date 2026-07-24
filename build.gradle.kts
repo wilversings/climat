@@ -95,6 +95,70 @@ tasks {
     }
 }
 
+// --- Combined GitHub Pages site ---
+// GitHub Pages only serves one site per repo, so the docs (Docusaurus) and
+// playground (Kotlin/JS) static sites are merged into a single output:
+//   /            -> redirects to /docs/
+//   /docs/       -> the Docusaurus site
+//   /playground/ -> the playground app
+val ghPagesBasePath = (findProperty("ghPagesBasePath") as String?) ?: "/${rootProject.name}"
+val ghPagesDir = layout.buildDirectory.dir("gh-pages")
+val docsDir = file("docs")
+val docsBuildDir = docsDir.resolve("build")
+
+tasks {
+    register<Exec>("npmInstallDocs") {
+        workingDir = docsDir
+        commandLine("npm", "ci")
+        inputs.file(docsDir.resolve("package-lock.json"))
+        outputs.dir(docsDir.resolve("node_modules"))
+    }
+
+    register<Exec>("buildDocsSite") {
+        dependsOn("npmInstallDocs")
+        workingDir = docsDir
+        commandLine("npm", "run", "build")
+        environment("DOCUSAURUS_BASE_URL", "$ghPagesBasePath/docs/")
+        inputs.dir(docsDir.resolve("docs"))
+        inputs.dir(docsDir.resolve("src"))
+        inputs.dir(docsDir.resolve("static"))
+        inputs.file(docsDir.resolve("docusaurus.config.js"))
+        inputs.file(docsDir.resolve("sidebars.js"))
+        outputs.dir(docsBuildDir)
+    }
+
+    register<Copy>("assembleGithubPages") {
+        group = "distribution"
+        description = "Builds docs and playground and merges them into a single GitHub Pages site."
+        dependsOn("buildDocsSite", ":playground:jsBrowserProductionWebpack")
+
+        into(ghPagesDir)
+        from(docsBuildDir) { into("docs") }
+        from(project(":playground").layout.buildDirectory.dir("dist/js/productionExecutable")) {
+            into("playground")
+        }
+
+        doLast {
+            ghPagesDir.get().asFile.resolve("index.html").writeText(
+                """
+                <!doctype html>
+                <html lang="en">
+                <head>
+                    <meta charset="utf-8" />
+                    <meta http-equiv="refresh" content="0; url=docs/" />
+                    <link rel="canonical" href="docs/" />
+                    <title>climat</title>
+                </head>
+                <body>
+                    <p>Redirecting to <a href="docs/">the docs</a>&hellip;</p>
+                </body>
+                </html>
+                """.trimIndent()
+            )
+        }
+    }
+}
+
 plugins.withType<NodeJsRootPlugin> {
     rootProject.kotlinNodeJsExtension.download = false
 }
