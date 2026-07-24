@@ -130,7 +130,7 @@ tasks {
     register<Copy>("assembleGithubPages") {
         group = "distribution"
         description = "Builds docs and playground and merges them into a single GitHub Pages site."
-        dependsOn("buildDocsSite", ":playground:jsBrowserProductionWebpack")
+        dependsOn("buildDocsSite", ":playground:jsBrowserDistribution")
 
         into(ghPagesDir)
         from(docsBuildDir) { into("docs") }
