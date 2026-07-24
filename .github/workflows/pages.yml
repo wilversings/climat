@@ -4,10 +4,6 @@ on:
   push:
     branches:
       - master
-    paths:
-      - 'docs/**'
-      - 'playground/**'
-      - '.github/workflows/pages.yml'
 
 permissions:
   contents: read
