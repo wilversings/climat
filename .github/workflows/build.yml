@@ -2,9 +2,15 @@ name: Build
 
 on:
   pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - 'playground/**'
   push:
     branches:
       - master
+    paths-ignore:
+      - 'docs/**'
+      - 'playground/**'
 
 jobs:
   test-unix:
