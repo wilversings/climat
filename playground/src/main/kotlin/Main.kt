@@ -43,9 +43,130 @@ sgit {
 
 // --- CodeMirror + custom-script runner, wired through require() so webpack bundles them ---
 
+/**
+ * A hand-rolled CodeMirror 6 "legacy stream" tokenizer for the climat DSL (mirrors the modes of
+ * the engine's `DslLexer.g4`: top-level keywords/punctuation, line and block comments, `"""`
+ * docstrings with `@param` tags, `"..."` strings and `<% %>` action templates (both support
+ * `$(name)` / `$(!name)` / `$(name:mapping)` interpolation).
+ *
+ * This is a simplified/flattened approximation of the ANTLR grammar's lexer modes, good enough
+ * for editor highlighting without pulling in a full Lezer grammar.
+ */
+private val climatLanguage: dynamic = js(
+    """
+    (function () {
+        var lang = require('@codemirror/language');
+
+        var KEYWORD = /^(const|true|false|action|scope|params|javascript|flag|arg|override|default|sub)(?![a-zA-Z0-9_-])/;
+        var MODIFIER = /^@(seal|shift|alias|aliases|allow-unmatched)(?![a-zA-Z0-9_-])/;
+        var IDENT = /^[a-zA-Z0-9_-]+/;
+
+        function tokenBlockComment(stream, state) {
+            var maybeEnd = false, ch;
+            while ((ch = stream.next()) != null) {
+                if (maybeEnd && ch === '/') { state.mode = 'top'; break; }
+                maybeEnd = ch === '*';
+            }
+            return 'comment';
+        }
+
+        function tokenDocstringRef(stream, state) {
+            stream.eatSpace();
+            if (stream.match(IDENT)) { state.mode = 'docstring'; return 'variableName'; }
+            state.mode = 'docstring';
+            return null;
+        }
+
+        function tokenDocstring(stream, state) {
+            if (stream.match('\"\"\"')) { state.mode = 'top'; return 'docComment'; }
+            if (stream.match(/^@param(?![a-zA-Z0-9_-])/)) { state.mode = 'docstringRef'; return 'annotation'; }
+            if (stream.match(/^[^@"]+/)) return 'docComment';
+            stream.next();
+            return 'docComment';
+        }
+
+        function tokenInterpolation(stream, state) {
+            stream.eatSpace();
+            if (stream.match(')')) { state.mode = 'template'; state.close = state.returnClose; state.returnClose = null; return 'punctuation'; }
+            if (stream.match('!')) return 'operator';
+            if (stream.match(':')) return 'punctuation';
+            if (stream.match(IDENT)) return 'variableName';
+            stream.next();
+            return null;
+        }
+
+        function tokenTemplate(stream, state) {
+            if (state.close === '\"' && stream.match('\"')) { state.mode = 'top'; state.close = null; return 'string'; }
+            if (state.close === '%>' && stream.match('%>')) { state.mode = 'top'; state.close = null; return 'meta'; }
+            if (stream.match(/^\\./)) return 'escape';
+            if (stream.match(/^\${'$'}\(/)) { state.mode = 'interpolation'; state.returnClose = state.close; return 'punctuation'; }
+            var rest = state.close === '\"' ? /^[^\\"${'$'}]+/ : /^[^\\%${'$'}]+/;
+            if (stream.match(rest)) return 'string';
+            stream.next();
+            return 'string';
+        }
+
+        function tokenTop(stream, state) {
+            if (stream.match('//')) { stream.skipToEnd(); return 'comment'; }
+            if (stream.match('/*')) return tokenBlockComment(stream, state);
+            if (stream.match('\"\"\"')) { state.mode = 'docstring'; return 'docComment'; }
+            if (stream.match('\"')) { state.mode = 'template'; state.close = '\"'; return 'string'; }
+            if (stream.match('<%')) { state.mode = 'template'; state.close = '%>'; return 'meta'; }
+            if (stream.match(MODIFIER)) return 'modifier';
+            if (stream.match(KEYWORD)) return 'keyword';
+            if (stream.match(/^[(){}\[\]]/)) return 'bracket';
+            if (stream.match(/^[=,:?]/)) return 'punctuation';
+            if (stream.match(IDENT)) return 'variableName';
+            stream.next();
+            return null;
+        }
+
+        function token(stream, state) {
+            if (stream.eatSpace()) return null;
+            switch (state.mode) {
+                case 'blockComment': return tokenBlockComment(stream, state);
+                case 'docstring': return tokenDocstring(stream, state);
+                case 'docstringRef': return tokenDocstringRef(stream, state);
+                case 'template': return tokenTemplate(stream, state);
+                case 'interpolation': return tokenInterpolation(stream, state);
+                default: return tokenTop(stream, state);
+            }
+        }
+
+        return lang.StreamLanguage.define({
+            name: 'climat',
+            startState: function () { return { mode: 'top', close: null, returnClose: null }; },
+            copyState: function (s) { return { mode: s.mode, close: s.close, returnClose: s.returnClose }; },
+            token: token
+        });
+    })()
+    """
+)
+
+private val climatHighlighting: dynamic = js(
+    """
+    (function () {
+        var lang = require('@codemirror/language');
+        var t = require('@lezer/highlight').tags;
+        return lang.syntaxHighlighting(lang.HighlightStyle.define([
+            { tag: t.keyword, color: 'var(--cmd)', fontWeight: '600' },
+            { tag: t.modifier, color: 'var(--warn)', fontWeight: '600' },
+            { tag: [t.comment, t.docComment], color: 'var(--muted)', fontStyle: 'italic' },
+            { tag: t.annotation, color: 'var(--warn)' },
+            { tag: t.string, color: 'var(--accent)' },
+            { tag: t.escape, color: 'var(--warn)' },
+            { tag: t.meta, color: 'var(--warn)', fontWeight: '600' },
+            { tag: t.variableName, color: 'var(--fg)' },
+            { tag: t.operator, color: 'var(--error)' },
+            { tag: [t.punctuation, t.bracket], color: 'var(--muted)' }
+        ]));
+    })()
+    """
+)
+
 private val makeEditor: dynamic = js(
     """
-    (function (parent, doc, onChange) {
+    (function (parent, doc, onChange, langExt, highlightExt) {
         var view = require('@codemirror/view');
         var cm = require('codemirror');
         var EditorView = view.EditorView;
@@ -54,7 +175,7 @@ private val makeEditor: dynamic = js(
         });
         return new EditorView({
             doc: doc,
-            extensions: [cm.basicSetup, listener],
+            extensions: [cm.basicSetup, langExt, highlightExt, listener],
             parent: parent
         });
     })
@@ -108,7 +229,7 @@ fun main() {
 
 private fun setupEditor() {
     val parent = document.getElementById("editor")
-    editorView = makeEditor(parent, DEFAULT_DSL, { src: String -> onDocChanged(src) })
+    editorView = makeEditor(parent, DEFAULT_DSL, { src: String -> onDocChanged(src) }, climatLanguage, climatHighlighting)
     // Small embedding hook: replace the editor content programmatically (also used by tests).
     window.asDynamic().__climatSetSource = { text: String -> setDoc(editorView, text) }
 }
