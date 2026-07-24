@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>climat playground</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="app">
+    <header id="topbar">
+        <span class="logo">climat</span>
+        <span class="tagline">playground &mdash; edit a definition, then try the toolchain in the shell</span>
+    </header>
+
+    <main id="panes">
+        <section id="editor-pane" class="pane">
+            <div class="pane-header">Definition <span class="hint">(.cli)</span></div>
+            <div id="editor"></div>
+            <div class="pane-header">Diagnostics</div>
+            <div id="diagnostics"><div class="diag-empty">No problems.</div></div>
+        </section>
+
+        <section id="shell-pane" class="pane">
+            <div class="pane-header">
+                Shell <span class="hint">(prints what would run &mdash; nothing is really executed)</span>
+            </div>
+            <div id="shell-output"></div>
+            <div id="shell-prompt-line">
+                <span id="shell-prompt">$</span>
+                <input id="shell-input" type="text" autocomplete="off" autocapitalize="off"
+                       spellcheck="false" placeholder="type a command, e.g. acp --amend" />
+            </div>
+        </section>
+    </main>
+</div>
+
+<script src="playground.js"></script>
+</body>
+</html>
