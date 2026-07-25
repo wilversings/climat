@@ -39,7 +39,7 @@ kotlin {
             customField(
                 "engines",
                 mapOf(
-                    "node" to ">=13.14",
+                    "node" to ">=22.23",
                 ),
             )
         }
@@ -158,8 +158,4 @@ tasks {
             )
         }
     }
-}
-
-plugins.withType<NodeJsPlugin> {
-    rootProject.kotlinNodeJsEnvSpec.download = false
 }
