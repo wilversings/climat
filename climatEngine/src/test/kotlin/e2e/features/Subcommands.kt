@@ -47,13 +47,13 @@ class Subcommands : E2ETestBase() {
                 }
             
                 sub child(p1: arg?) {
-                    action <% echo 'i am child with param @{p1}' %>
+                    action <% echo i am child with param @{p1} %>
                 }
             }
         """
             .assertResults(
-                "child --p1 bcd" to "echo 'i am child with param bcd'",
-                "child --p1 abc" to "echo 'i am child with param abc'"
+                "child --p1 bcd" to "echo i am child with param 'bcd'",
+                "child --p1 abc" to "echo i am child with param 'abc'"
             )
     }
 

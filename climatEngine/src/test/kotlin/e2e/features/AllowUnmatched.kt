@@ -19,7 +19,7 @@ class AllowUnmatched : E2ETestBase() {
                 }
             }
         """.assertResults(
-            "r child a b c d e" to "echo c d e"
+            "r child a b c d e" to "echo 'c' 'd' 'e'"
         ).assertThrows<Exception>(
             "r child2 a b c d e" to { }
         )

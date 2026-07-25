@@ -42,3 +42,9 @@ internal fun <T> Iterable<T>.joinToStringIfNotEmpty(
 
 internal fun String.unescape(char: Char): String = replace("\\$char", char.toString())
 internal fun String.unescape(string: String): String = replace("\\$string", string)
+
+// Wraps a value in POSIX shell single quotes so it is passed to the shell as a single,
+// literal argument (no word-splitting, globbing, or command substitution on the value).
+// Embedded single quotes are handled with the standard `'\''` sequence.
+internal fun shellSingleQuote(value: String): String =
+    "'" + value.replace("'", "'\\''") + "'"

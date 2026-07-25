@@ -7,6 +7,7 @@ import com.climat.library.domain.ref.PredefinedParamDefinition
 import com.climat.library.domain.ref.RefWithAnyValue
 import com.climat.library.domain.ref.RefWithValue
 import com.climat.library.utils.emptyString
+import com.climat.library.utils.shellSingleQuote
 import org.lighthousegames.logging.logging
 
 var log = logging("Interpolation")
@@ -20,41 +21,50 @@ internal class Interpolation(
         val refWithValue = values.find { it.ref.name == name }
             ?: throw IllegalArgumentException("Could not find ref named `$name` inside the collection")
 
-        val value = getStringValueFrom(refWithValue.value)
         return if (mapping != null) {
-            log.d { "Mapping <$mapping> to value <$value>" }
-            mapValue(refWithValue, value, mapping)
+            log.d { "Mapping <$mapping> to value <${refWithValue.value}>" }
+            mapValue(refWithValue, mapping)
         } else {
-            log.d { "No mapping found for $name, therefore interpolating bare value <$value>" }
-            value
+            log.d { "No mapping found for $name, therefore interpolating bare value <${refWithValue.value}>" }
+            bareValue(refWithValue)
         }
     }
+
+    // User-supplied values (string args and leftover varargs) are wrapped in single quotes so they
+    // reach the shell as a single, literal argument (no word-splitting, globbing or injection).
+    // Trusted DSL text (constants, flag values, flag tokens) is emitted verbatim, so e.g. a constant
+    // holding a shell fragment still works, and a flag mapping is not accidentally quoted.
+    private fun bareValue(refWithValue: RefWithValue<*>): String =
+        when (val value = refWithValue.value) {
+            is Array<*> -> value.joinToString(" ") { shellSingleQuote(it.toString()) }
+            else -> value.toString().let { str ->
+                if (refWithValue.ref is ArgDefinition && str.isNotEmpty()) shellSingleQuote(str) else str
+            }
+        }
 
     private fun mapValue(
         refWithValue: RefWithValue<*>,
-        value: String,
         mapping: String
-    ) = when (val ref = refWithValue.ref) {
-        is FlagDefinition -> mapBoolean(value, mapping)
-        is ArgDefinition -> mapString(value, mapping)
-        is Constant -> if (ref.isBoolean) {
-            mapBoolean(value, mapping)
-        } else {
-            mapString(value, mapping)
-        }
+    ): String {
+        val value = refWithValue.value.toString()
+        return when (val ref = refWithValue.ref) {
+            is FlagDefinition -> mapBoolean(value, mapping)
+            is ArgDefinition -> mapString(value, mapping, quote = true)
+            is Constant -> if (ref.isBoolean) {
+                mapBoolean(value, mapping)
+            } else {
+                mapString(value, mapping, quote = false)
+            }
 
-        is PredefinedParamDefinition -> throw Exception("Cannot map vararg argument type") // TODO proper error
-        else -> throw Exception("Type type not supported") // TODO proper error
+            is PredefinedParamDefinition -> throw Exception("Cannot map vararg argument type") // TODO proper error
+            else -> throw Exception("Type type not supported") // TODO proper error
+        }
     }
 
-    private fun getStringValueFrom(value: Any): String =
-        when (value) {
-            is Array<*> -> value.joinToString(" ")
-            else -> value.toString()
-        }
-
-    private fun mapString(value: String, mapping: String): String = if (value.isNotEmpty()) {
-        "$mapping=$value"
+    // The `mapping` key is author-controlled DSL text and is left as-is; only a user-supplied value
+    // is single-quoted, e.g. `--today-is='New York'`.
+    private fun mapString(value: String, mapping: String, quote: Boolean): String = if (value.isNotEmpty()) {
+        "$mapping=${if (quote) shellSingleQuote(value) else value}"
     } else {
         emptyString()
     }

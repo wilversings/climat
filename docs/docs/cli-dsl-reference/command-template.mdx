@@ -58,3 +58,37 @@ Hello World Tuesday
 $ hello-world Tuesday bar
 Hello World --today-is=Tuesday
 ```
+
+# Argument quoting
+
+Values that come from the user — `arg` parameters and the unmatched-args passthrough — are
+automatically wrapped in single quotes when interpolated into the command. Each one reaches the
+shell as a single, literal argument, so spaces and shell metacharacters in a value cannot
+word-split or inject:
+
+```clidsl
+greet(name: arg) {
+    action <% echo Hello @{name} %>
+}
+```
+
+```bash title=Console
+$ greet "Ada Lovelace"
+Hello Ada Lovelace          # the value stays one argument
+
+$ greet '; rm -rf ~'
+Hello ; rm -rf ~            # the value is printed, not executed
+```
+
+Because of this you no longer need to hand-quote interpolations (`'@{name}'`) — doing so just adds
+redundant quotes.
+
+:::note
+Only user input is quoted. `const` values and flag mappings are trusted text you wrote in the DSL,
+so they are interpolated verbatim (a constant can still hold, say, a shell fragment).
+:::
+
+:::caution
+Quoting uses POSIX shell single quotes, so isolation applies to the default `*NIX` shell (`/bin/sh`).
+On Windows (`cmd.exe`) single quotes are not argument delimiters.
+:::

@@ -18,10 +18,10 @@ class Parameters : E2ETestBase() {
         """
             .assertResults(
                 "Cluj-Napoca" to
-                    "echo Hello World from Cluj-Napoca",
+                    "echo Hello World from 'Cluj-Napoca'",
 
                 "Cluj-Napoca child" to
-                    "echo Hello Child from Cluj-Napoca"
+                    "echo Hello Child from 'Cluj-Napoca'"
             )
     }
 
@@ -34,8 +34,8 @@ class Parameters : E2ETestBase() {
         """
             .assertResults(
                 "" to "echo Hello World from",
-                "--location Cluj-Napoca" to "echo Hello World from Cluj-Napoca",
-                "-l Cluj-Napoca" to "echo Hello World from Cluj-Napoca"
+                "--location Cluj-Napoca" to "echo Hello World from 'Cluj-Napoca'",
+                "-l Cluj-Napoca" to "echo Hello World from 'Cluj-Napoca'"
             )
     }
 
@@ -47,8 +47,8 @@ class Parameters : E2ETestBase() {
             }
         """
             .assertResults(
-                "" to "echo Hello World from the other side",
-                "--location Cluj-Napoca" to "echo Hello World from Cluj-Napoca"
+                "" to "echo Hello World from 'the other side'",
+                "--location Cluj-Napoca" to "echo Hello World from 'Cluj-Napoca'"
             )
     }
 }

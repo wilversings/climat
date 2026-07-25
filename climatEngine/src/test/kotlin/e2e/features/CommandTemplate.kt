@@ -48,9 +48,9 @@ class CommandTemplate : E2ETestBase() {
             }
         """
             .assertResults(
-                "Tuesday foo" to "echo Hello World Tuesday",
+                "Tuesday foo" to "echo Hello World 'Tuesday'",
 
-                "Tuesday bar" to "echo Hello World --today-is=Tuesday",
+                "Tuesday bar" to "echo Hello World --today-is='Tuesday'",
             )
     }
 }

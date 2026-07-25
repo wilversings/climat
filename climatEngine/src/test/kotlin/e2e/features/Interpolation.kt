@@ -16,7 +16,7 @@ class Interpolation : E2ETestBase() {
             }
         """
             .assertResults(
-                "world" to "echo ${dollar}(date) world"
+                "world" to "echo ${dollar}(date) 'world'"
             )
     }
 
@@ -56,6 +56,22 @@ class Interpolation : E2ETestBase() {
         """
             .assertResults(
                 "" to "echo @{home}"
+            )
+    }
+
+    @Test
+    fun userArgsAreIsolatedFromTheShell() {
+        // A user-supplied arg is single-quoted, so shell metacharacters in its value are inert
+        // (no word-splitting, command substitution, or injection).
+        """
+            demo(x: arg) {
+                action <% echo @{x} %>
+            }
+        """
+            .assertResults(
+                "a;b${dollar}(evil)" to "echo 'a;b${dollar}(evil)'",
+                // an embedded single quote is escaped with the POSIX '\'' sequence
+                "it's" to "echo 'it'\\''s'"
             )
     }
 }

@@ -16,7 +16,7 @@ class TestExecution : E2ETestBase() {
         action <% echo 'abcd' %>
         
         sub template(param1: arg? = "default", param2: arg?) {
-          action <% echo '@{interactive}' '@{param1}' @{interactive:--interactiveSwitch} @{param1:--mapped} %>
+          action <% echo '@{interactive}' @{param1} @{interactive:--interactiveSwitch} @{param1:--mapped} %>
         }
       }
       sub renew {
@@ -38,13 +38,13 @@ class TestExecution : E2ETestBase() {
                 "echo 'abcd'",
 
             "new --interactive template --param1 abc" to
-                "echo 'true' 'abc' --interactiveSwitch --mapped=abc",
+                "echo 'true' 'abc' --interactiveSwitch --mapped='abc'",
 
             "new template --param2 we" to
-                "echo 'false' 'default' --mapped=default",
+                "echo 'false' 'default' --mapped='default'",
 
             "new --interactive template --param2 we --param1 nondefault" to
-                "echo 'true' 'nondefault' --interactiveSwitch --mapped=nondefault",
+                "echo 'true' 'nondefault' --interactiveSwitch --mapped='nondefault'",
 
             "renew" to
                 "echo 'qwe' --c=constantValue constantValue --switch",
