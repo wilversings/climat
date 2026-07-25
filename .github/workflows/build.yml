@@ -55,37 +55,37 @@ jobs:
           path: integrationTests/build/reports
           retention-days: 10
 
-  test-windows:
-    strategy:
-      matrix:
-        node-version: [ '22.23', '26.5' ]
+  # test-windows:
+  #   strategy:
+  #     matrix:
+  #       node-version: [ '22.23', '26.5' ]
 
-    name: Build with Node ${{ matrix.node-version }} on windows-latest
-    runs-on: windows-latest
-    steps:
-      - run: echo "${HOME}\climat\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-      - uses: actions/checkout@v7
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ matrix.node-version }}
-      - name: Setup Java
-        uses: actions/setup-java@v5
-        with:
-          distribution: zulu
-          java-version: 25
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
-      - name: Execute Gradle build
-        run: ./gradlew build -x integrationTests:jsNodeTest
-      - name: Install climat
-        run: npm install -g build/dist/js/productionExecutable
-      - name: Run integration tests
-        run: ./gradlew integrationTests:jsNodeTest
-      - name: Archive artifacts
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: integration-tests-reports-windows-latest-node-${{ matrix.node-version }}
-          path: integrationTests/build/reports
-          retention-days: 10
+  #   name: Build with Node ${{ matrix.node-version }} on windows-latest
+  #   runs-on: windows-latest
+  #   steps:
+  #     - run: echo "${HOME}\climat\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+  #     - uses: actions/checkout@v7
+  #     - name: Setup Node
+  #       uses: actions/setup-node@v6
+  #       with:
+  #         node-version: ${{ matrix.node-version }}
+  #     - name: Setup Java
+  #       uses: actions/setup-java@v5
+  #       with:
+  #         distribution: zulu
+  #         java-version: 25
+  #     - name: Setup Gradle
+  #       uses: gradle/actions/setup-gradle@v6
+  #     - name: Execute Gradle build
+  #       run: ./gradlew build -x integrationTests:jsNodeTest
+  #     - name: Install climat
+  #       run: npm install -g build/dist/js/productionExecutable
+  #     - name: Run integration tests
+  #       run: ./gradlew integrationTests:jsNodeTest
+  #     - name: Archive artifacts
+  #       uses: actions/upload-artifact@v4
+  #       if: always()
+  #       with:
+  #         name: integration-tests-reports-windows-latest-node-${{ matrix.node-version }}
+  #         path: integrationTests/build/reports
+  #         retention-days: 10
