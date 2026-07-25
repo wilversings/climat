@@ -10,6 +10,7 @@ import com.climat.library.domain.action.ScopeParamsActionValue
 import com.climat.library.domain.action.TemplateActionValue
 import com.climat.library.validation.ValidationResult
 import kotlinx.browser.document
+import kotlinx.browser.localStorage
 import kotlinx.browser.window
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
@@ -40,6 +41,8 @@ sgit {
     }
 }
 """.trimIndent()
+
+private const val STORAGE_KEY = "climat-playground-source"
 
 // --- CodeMirror + custom-script runner, wired through require() so webpack bundles them ---
 
@@ -217,9 +220,10 @@ private val history = mutableListOf<String>()
 private var historyIdx = 0
 
 fun main() {
-    setupEditor()
+    val initialSource = localStorage.getItem(STORAGE_KEY) ?: DEFAULT_DSL
+    setupEditor(initialSource)
     setupShell()
-    analyze(DEFAULT_DSL)
+    analyze(initialSource)
     printLine("Welcome to the climat playground.", "note")
     printLine("Edit the definition on the left, then type a command below.", "note")
     printLine("Try:  acp --amend   |   cf myFeature --force", "note")
@@ -227,9 +231,9 @@ fun main() {
 
 // --- Editor & diagnostics ---
 
-private fun setupEditor() {
+private fun setupEditor(initialSource: String) {
     val parent = document.getElementById("editor")
-    editorView = makeEditor(parent, DEFAULT_DSL, { src: String -> onDocChanged(src) }, climatLanguage, climatHighlighting)
+    editorView = makeEditor(parent, initialSource, { src: String -> onDocChanged(src) }, climatLanguage, climatHighlighting)
     // Small embedding hook: replace the editor content programmatically (also used by tests).
     window.asDynamic().__climatSetSource = { text: String -> setDoc(editorView, text) }
 }
@@ -238,6 +242,7 @@ private fun currentSource(): String =
     editorView?.state?.doc?.toString() as? String ?: DEFAULT_DSL
 
 private fun onDocChanged(source: String) {
+    localStorage.setItem(STORAGE_KEY, source)
     window.clearTimeout(debounceHandle)
     debounceHandle = window.setTimeout({ analyze(source) }, 300)
 }
