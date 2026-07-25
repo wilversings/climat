@@ -8,7 +8,7 @@ channels {
 
 @members {
     // Number of `{` characters that opened the action body currently being lexed. The body ends at
-    // the first run of exactly that many `}` characters, so `action {{ ... }}` may contain lone
+    // the first run of exactly that many `}` characters, so `act sh {{ ... }}` may contain lone
     // braces (shell blocks, `${VAR}`, JavaScript bodies) without any escaping.
     private var actionBraceCount = 0
 
@@ -33,10 +33,9 @@ QMARK: '?';
 CONST: 'const';
 TRUE: 'true';
 FALSE: 'false';
-ACTION: 'action';
-SCOPE: 'scope';
-PARAMS: 'params';
-JAVASCRIPT: 'javascript';
+ACT: 'act';
+SH: 'sh';
+JS: 'js';
 
 // Parameters
 FLAG: 'flag';
@@ -56,15 +55,15 @@ SUB: 'sub';
 
 // Props
 // An action body opens with a run of one or more `{` and closes with an equally long run of `}`.
-ActionTemplate_BEGIN: ACTION WS* LCURLY+ {openActionBody();} -> pushMode(ActionTemplate);
-CustomScript_JAVASCRIPT_BEGIN: JAVASCRIPT WS* ACTION WS* LCURLY+ {openActionBody();} -> pushMode(CustomScript);
+ActionTemplate_BEGIN: ACT WS* SH WS* LCURLY+ {openActionBody();} -> pushMode(ActionTemplate);
+CustomScript_JS_BEGIN: ACT WS* JS WS* LCURLY+ {openActionBody();} -> pushMode(CustomScript);
 
 // Comments
 MULTILINE_COMMENT: '/*' .*? '*/' -> channel(COMMENT);
 SINGLELINE_COMMENT: '//' .*? '\n' -> channel(COMMENT);
 
 // Actions
-SCOPE_PARAMS: ACTION WS* SCOPE WS* PARAMS;
+ACT_SCOPE_PARAMS: ACT WS* 'scope-params';
 
 // Docstring
 Docstring_BEGIN: '"""' -> pushMode(Docstring);

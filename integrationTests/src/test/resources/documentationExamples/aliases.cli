@@ -3,7 +3,7 @@ my-toolchain {
     @aliases(ct child) // Defines one or more aliases
     @alias(cld)          // Defines one alias
     sub child-toolchain {
-        action { echo Child }
+        act sh { echo Child }
     }
 
 }

@@ -4,14 +4,14 @@ climat_version: 0.0.5
 ```clidsl title="sgit.cli"
 sgit {
     sub acp(amend a: flag) {
-        action {
+        act sh {
             git add . &&
             git commit @{amend ? "--amend"} &&
             git push @{amend ? "--force"}
         }
     }
     sub cf(branch: arg, force f: flag) {
-        action {
+        act sh {
             git checkout feature/@{branch} @{force ? "--force"}
         }
     }

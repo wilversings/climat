@@ -21,21 +21,21 @@ import org.w3c.dom.events.KeyboardEvent
  *
  * The engine (`:climatEngine`) is pure Kotlin/JS with no Node dependency, so we call `parse`,
  * `getValidations` and `execute` directly. Instead of running the resolved shell command (which is
- * impossible in a browser) we simply print it. Custom `javascript action`s are actually run, but in
+ * impossible in a browser) we simply print it. Custom `act js` actions are actually run, but in
  * a sandbox where `require(...)` is unavailable — so `child_process`/`fs` calls fail gracefully.
  */
 
 private val DEFAULT_DSL = """
 sgit {
     sub acp(amend a: flag) {
-        action {
+        act sh {
             git add . &&
             git commit @{amend ? "--amend"} &&
             git push @{amend ? "--force"}
         }
     }
     sub cf(branch: arg, force f: flag) {
-        action {
+        act sh {
             git checkout feature/@{branch} @{force ? "--force"}
         }
     }
@@ -60,7 +60,7 @@ private val climatLanguage: dynamic = js(
     (function () {
         var lang = require('@codemirror/language');
 
-        var KEYWORD = /^(const|true|false|action|scope|params|javascript|flag|arg|override|default|sub)(?![a-zA-Z0-9_-])/;
+        var KEYWORD = /^(const|true|false|act|sh|js|scope-params|flag|arg|override|default|sub)(?![a-zA-Z0-9_-])/;
         var MODIFIER = /^@(seal|shift|alias|aliases|allow-unmatched)(?![a-zA-Z0-9_-])/;
         var IDENT = /^[a-zA-Z0-9_-]+/;
 
@@ -135,7 +135,7 @@ private val climatLanguage: dynamic = js(
                 state.mode = 'template'; state.close = stream.current().length; return 'meta';
             }
             if (stream.match(MODIFIER)) return 'modifier';
-            if (stream.match(KEYWORD)) { state.afterAction = stream.current() === 'action'; return 'keyword'; }
+            if (stream.match(KEYWORD)) { var kw = stream.current(); state.afterAction = kw === 'sh' || kw === 'js'; return 'keyword'; }
             if (stream.match(/^[(){}\[\]]/)) return 'bracket';
             if (stream.match(/^[=,:?]/)) return 'punctuation';
             if (stream.match(IDENT)) return 'variableName';

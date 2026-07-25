@@ -36,6 +36,6 @@ internal fun decodeRootAction(cliDsl: String, statements: List<DslParser.RootSta
                 .unescape('}'),
             javascriptAction.position
         )
-        else -> child.assertRequire(cliDsl) { SCOPE_PARAMS() }.text.let { ScopeParamsActionValue() }
+        else -> child.assertRequire(cliDsl) { ACT_SCOPE_PARAMS() }.text.let { ScopeParamsActionValue() }
     }
 }

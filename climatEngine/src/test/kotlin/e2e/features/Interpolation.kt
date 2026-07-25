@@ -12,7 +12,7 @@ class Interpolation : E2ETestBase() {
         // `$(...)` is plain shell now; only `@{...}` interpolates
         """
             demo(name: arg) {
-                action { echo ${dollar}(date) @{name} }
+                act sh { echo ${dollar}(date) @{name} }
             }
         """
             .assertResults(
@@ -25,7 +25,7 @@ class Interpolation : E2ETestBase() {
         """
             demo {
                 const price = "5${dollar}"
-                action { echo @{price} }
+                act sh { echo @{price} }
             }
         """
             .assertResults(
@@ -39,7 +39,7 @@ class Interpolation : E2ETestBase() {
         """
             demo {
                 const email = "team@corp.com"
-                action { scp file user@host:/tmp && echo @{email} }
+                act sh { scp file user@host:/tmp && echo @{email} }
             }
         """
             .assertResults(
@@ -52,7 +52,7 @@ class Interpolation : E2ETestBase() {
         // A wider delimiter keeps the trailing `}` of the literal out of the body's closing run
         """
             demo {
-                action {{ echo \@{home} }}
+                act sh {{ echo \@{home} }}
             }
         """
             .assertResults(
@@ -66,7 +66,7 @@ class Interpolation : E2ETestBase() {
         // (no word-splitting, command substitution, or injection).
         """
             demo(x: arg) {
-                action { echo @{x} }
+                act sh { echo @{x} }
             }
         """
             .assertResults(

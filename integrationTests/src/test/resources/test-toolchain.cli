@@ -3,18 +3,18 @@
 @alias(test3)
 test-toolchain(arg0: arg? = "[no value for arg0]") {
   sub child(arg1 p: arg? = "[no value for arg1!]", arg2 c: arg? = "[no value for arg2!]") {
-    action { echo Hello! I was executed with arg1 = @{arg1} and arg2 = @{arg2} }
+    act sh { echo Hello! I was executed with arg1 = @{arg1} and arg2 = @{arg2} }
     
     sub grandchild1 {
-      action { echo Hello from the other side @{arg1} @{arg2} }
+      act sh { echo Hello from the other side @{arg1} @{arg2} }
     }
 
     sub grandchild2(param1: arg) {
-      javascript action {{
+      act js {{
         console.log(`Hello from JS! ${params.param1} ${params.arg1} ${params.arg2}`)
       }}
     }
   }
 
-  action { echo Hello! I was executed with arg0 = @{arg0} }
+  act sh { echo Hello! I was executed with arg0 = @{arg0} }
 }

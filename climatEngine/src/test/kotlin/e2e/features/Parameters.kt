@@ -9,10 +9,10 @@ class Parameters : E2ETestBase() {
     fun scope() {
         """
             hello-world(location l: arg) {
-                action { echo Hello World from @{location} }
+                act sh { echo Hello World from @{location} }
 
                 sub child {
-                    action { echo Hello Child from @{location} }
+                    act sh { echo Hello Child from @{location} }
                 }
             }
         """
@@ -29,7 +29,7 @@ class Parameters : E2ETestBase() {
     fun optionals() {
         """
             hello-world(location l: arg?) {
-                action { echo Hello World from @{location} }
+                act sh { echo Hello World from @{location} }
             }
         """
             .assertResults(
@@ -43,7 +43,7 @@ class Parameters : E2ETestBase() {
     fun defaults() {
         """
             hello-world(location l: arg? = "the other side") {
-                action { echo Hello World from @{location} }
+                act sh { echo Hello World from @{location} }
             }
         """
             .assertResults(

@@ -20,11 +20,11 @@ paramShort: IDENTIFIER;
 subBody: LCURLY subStatements* RCURLY;
 subStatements: rootStatements;
 
-action: shellAction | javascriptAction | SCOPE_PARAMS;
+action: shellAction | javascriptAction | ACT_SCOPE_PARAMS;
 
 shellAction: ActionTemplate_BEGIN actionTemplateEntry* ActionTemplate_CLOSE;
 // The script is split into several tokens whenever it contains braces that don't close the body
-javascriptAction: CustomScript_JAVASCRIPT_BEGIN CustomScript_SCRIPT* CustomScript_END;
+javascriptAction: CustomScript_JS_BEGIN CustomScript_SCRIPT* CustomScript_END;
 
 constDef: CONST IDENTIFIER EQ literal;
 

@@ -2,6 +2,6 @@ my-toolchain {
   const my-const = "My Dear Constant Value"
 
   sub my-child {
-    action { echo Child @{my-const} }
+    act sh { echo Child @{my-const} }
   }
 }

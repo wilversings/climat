@@ -26,7 +26,7 @@ class Subcommands : E2ETestBase() {
                 @aliases(ct child) // Defines one or more aliases
                 @alias(cld)          // Defines one alias
                 sub child-toolchain {
-                    action { echo 'Child' }
+                    act sh { echo 'Child' }
                 }
 
             }
@@ -47,7 +47,7 @@ class Subcommands : E2ETestBase() {
                 }
             
                 sub child(p1: arg?) {
-                    action { echo i am child with param @{p1} }
+                    act sh { echo i am child with param @{p1} }
                 }
             }
         """

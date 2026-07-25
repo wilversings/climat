@@ -30,11 +30,11 @@ class ParserSanityCheck : E2ETestBase() {
                p5: arg? = "wat",
                p6: flag) {
                const myConst = "abc @{p1} cde"
-               action { random action }
+               act sh { random action }
             }
             
             sub c4 {
-                action scope params
+                act scope-params
                 
                 @seal sub aa{
                     const ae = "wat"
@@ -60,7 +60,7 @@ class ParserSanityCheck : E2ETestBase() {
         """
             root {
                 const cst = "my statement\""
-                action { echo 'ab\}' @{cst} }
+                act sh { echo 'ab\}' @{cst} }
             }
         """.assertResults(
             "" to "echo 'ab}' my statement\""
@@ -73,7 +73,7 @@ class ParserSanityCheck : E2ETestBase() {
         // wider delimiter lets braces through unescaped
         """
             root {
-                action {{ if true; then echo ${'$'}{HOME}; fi }}
+                act sh {{ if true; then echo ${'$'}{HOME}; fi }}
             }
         """.assertResults(
             "" to "if true; then echo ${'$'}{HOME}; fi"
@@ -81,7 +81,7 @@ class ParserSanityCheck : E2ETestBase() {
 
         """
             root {
-                action {{{ echo }} }}}
+                act sh {{{ echo }} }}}
             }
         """.assertResults(
             "" to "echo }}"

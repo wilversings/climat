@@ -1,7 +1,7 @@
 my-toolchain {
-  action { echo Hello }
+  act sh { echo Hello }
 
   sub child-toolchain {   // <- Child name
-    action { echo Child }   // <- Child action
+    act sh { echo Child }   // <- Child action
   }
 }

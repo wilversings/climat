@@ -3,7 +3,7 @@ package com.climat
 const val MANIFEST_TEXT = """
 climat(version v: flag) {
 
-  javascript action {{
+  act js {{
     if (JSON.parse(params.get("version"))) {
       console.log(
         require(
@@ -19,7 +19,7 @@ climat(version v: flag) {
   ""${'"'}
   @allow-unmatched
   sub exec(pathToManifest p: arg, skipValidation: flag) {
-    javascript action {{ climat.exec(params.get("pathToManifest"), params.get("__UNMATCHED"), params.get("skipValidation")) }}
+    act js {{ climat.exec(params.get("pathToManifest"), params.get("__UNMATCHED"), params.get("skipValidation")) }}
   }
 
   ""${'"'}
@@ -27,7 +27,7 @@ climat(version v: flag) {
   ""${'"'}
   @allow-unmatched
   sub run {
-    javascript action {{ climat.run(params.get("__UNMATCHED")) }}
+    act js {{ climat.run(params.get("__UNMATCHED")) }}
   }
 
   ""${'"'}
@@ -37,7 +37,7 @@ climat(version v: flag) {
   ""${'"'}
   @allow-unmatched
   sub runGlobal(name n: arg, shellPath: arg?) {
-    javascript action {{ climat.runGlobal(params.get("name"), params.get("__UNMATCHED"), params.get("shellPath")) }}
+    act js {{ climat.runGlobal(params.get("name"), params.get("__UNMATCHED"), params.get("shellPath")) }}
   }
 
   ""${'"'}
@@ -45,7 +45,7 @@ climat(version v: flag) {
   @param pathToManifest the path to toolchain manifest
   ""${'"'}
   sub validate(pathToManifest p: arg) {
-    javascript action {{ climat.validate(params.get("pathToManifest")) }}
+    act js {{ climat.validate(params.get("pathToManifest")) }}
   }
 
   ""${'"'}
@@ -53,7 +53,7 @@ climat(version v: flag) {
   @param name the name of the toolchain to uninstall
   ""${'"'}
   sub uninstall(name n: arg) {
-    javascript action {{ climat.uninstall(params.get("name")) }}
+    act js {{ climat.uninstall(params.get("name")) }}
   }
 
   ""${'"'}
@@ -62,7 +62,7 @@ climat(version v: flag) {
   ""${'"'}
   @alias(i)
   sub install(pathToManifest p: arg) {
-    javascript action {{ climat.install(params.get("pathToManifest")) }}
+    act js {{ climat.install(params.get("pathToManifest")) }}
   }
 
   ""${'"'}
@@ -70,13 +70,13 @@ climat(version v: flag) {
   ""${'"'}
   @aliases(ls l)
   sub list {
-    javascript action {{ climat.list() }}
+    act js {{ climat.list() }}
   }
 
   ""${'"'}
   Cleans all the installed toolchains and all the clutter left behid by Climat
   ""${'"'}
   sub purge {
-    javascript action {{ climat.purge() }}
+    act js {{ climat.purge() }}
   }
 }"""

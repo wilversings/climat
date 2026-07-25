@@ -9,24 +9,24 @@ class TestExecution : E2ETestBase() {
     cli-alias-aggregator {
       const C1 = "constantValue"
       const C2 = true
-      action { echo root action }
+      act sh { echo root action }
       
       
       sub new(interactive: flag) {
-        action { echo 'abcd' }
+        act sh { echo 'abcd' }
         
         sub template(param1: arg? = "default", param2: arg?) {
-          action { echo '@{interactive}' @{param1} @{interactive ? "--interactiveSwitch"} @{param1 ? "--mapped={}"} }
+          act sh { echo '@{interactive}' @{param1} @{interactive ? "--interactiveSwitch"} @{param1 ? "--mapped={}"} }
         }
       }
       sub renew {
-        action { echo 'qwe' @{C1 ? "--c={}"} @{C1} @{C2 ? "--switch"} }
+        act sh { echo 'qwe' @{C1 ? "--c={}"} @{C1} @{C2 ? "--switch"} }
       }
       sub remove(force: flag) {
-        action { echo 'what ever' }
+        act sh { echo 'what ever' }
       }
       sub export(type: flag) {
-        action { echo 'abcd' }
+        act sh { echo 'abcd' }
       }
       sub noop {}
     }"""

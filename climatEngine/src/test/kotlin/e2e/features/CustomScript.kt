@@ -15,7 +15,7 @@ class CustomScript {
                 """
                 hello-world(location l: arg) {
     
-                    javascript action {{
+                    act js {{
                         console.log("Hello World from a JavaScript environment !");
                         console.log("It seems that you are situated in ", params.location);
                         console.log("Is that correct?");
@@ -32,7 +32,7 @@ class CustomScript {
         val script = customScriptOf(
             """
                 hello-world {
-                    javascript action {{
+                    act js {{
                         if (a > b) { console.log("a is greater than b") }
                     }}
                 }
@@ -47,7 +47,7 @@ class CustomScript {
         val script = customScriptOf(
             """
                 hello-world {
-                    javascript action { console.log("closing brace: \}") }
+                    act js { console.log("closing brace: \}") }
                 }
             """
         )

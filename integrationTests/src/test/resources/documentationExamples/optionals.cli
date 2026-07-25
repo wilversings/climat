@@ -1,3 +1,3 @@
 hello-world(location l: arg?) {
-    action { echo Hello World from @{location} }
+    act sh { echo Hello World from @{location} }
 }

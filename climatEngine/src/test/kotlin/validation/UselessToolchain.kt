@@ -9,7 +9,7 @@ import kotlin.test.Test
 class UselessToolchain {
     private val toolchain = """
         root(param1: flag, param2: arg?) {
-            sub root_child() { action { dummy @{param1} @{param2} @{param_2} @{undef} @{undef2} } }
+            sub root_child() { act sh { dummy @{param1} @{param2} @{param_2} @{undef} @{undef2} } }
             sub useless_child(param1: flag, param_2: arg?, param3: arg?) {}
         }
     """

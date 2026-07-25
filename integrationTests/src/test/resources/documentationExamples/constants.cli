@@ -1,4 +1,4 @@
 my-toolchain {
   const my-const = "My Dear Constant Value"
-  action { echo @{my-const} }
+  act sh { echo @{my-const} }
 }

@@ -3,11 +3,11 @@ climat_version: 0.0.5
 ---
 ```clidsl title="overriding-defaults.cli"
 hello-world(location l: arg? = "the other side") {
-    action { echo Hello World from @{location} }
+    act sh { echo Hello World from @{location} }
 
     sub child {
         override default location = "this side"
-        action { echo Hello Child from @{location} }
+        act sh { echo Hello Child from @{location} }
     }
 }
 ```

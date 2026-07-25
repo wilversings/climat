@@ -6,7 +6,7 @@ my-toolchain {                // <- Root toolchain
                               //    The name of the root toolchain will
                               //    define the name of the executable CLI
        
-  action { echo Hello }     // <- The action to execute when the
+  act sh { echo Hello }     // <- The action to execute when the
                               //    toolchain is invoked
 }
 ```
