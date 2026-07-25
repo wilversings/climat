@@ -72,7 +72,7 @@ plumbing — the option name goes with it:
 
 ```clidsl
 greet(name: arg?, greeting: arg?) {
-    action <% say @{greeting ? "--greeting {}"} @{name ? "-n{}"} %>
+    action { say @{greeting ? "--greeting {}"} @{name ? "-n{}"} }
 }
 ```
 
@@ -100,7 +100,7 @@ word-split or inject:
 
 ```clidsl
 greet(name: arg) {
-    action <% echo Hello @{name} %>
+    action { echo Hello @{name} }
 }
 ```
 

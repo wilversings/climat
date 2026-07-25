@@ -45,6 +45,31 @@ export default function prismIncludeLanguages(PrismObject) {
     }
   };
 
+  // An action body opens with a run of `{` and closes with an equally long run of `}`. A regex
+  // can't count, so the delimiter widths are spelled out widest-first; three is plenty for docs.
+  const actionBody = [3, 2, 1]
+    .map((n) => {
+      // Body content is anything but a `}` run long enough to close it
+      const content = `(?:\\\\[\\s\\S]|[^\\\\}]|\\}(?!\\}{${n - 1}}))*`;
+      return `\\{{${n}}${content}\\}{${n}}`;
+    })
+    .join('|');
+
+  const actionTemplate = {
+    pattern: new RegExp(`((?:^|[^\\w-])(?:javascript\\s+)?action\\s*)(?:${actionBody})`),
+    lookbehind: true,
+    greedy: true,
+    alias: 'string',
+    inside: {
+      'punctuation': /^\{+|\}+$/,
+      'interpolation': interpolation,
+      'escape': {
+        pattern: /\\./,
+        alias: 'char'
+      }
+    }
+  };
+
   // Identifiers may contain `-`, so `\b` is too weak a boundary: it would light up the `arg` in
   // `my-arg`.
   const keyword = {
@@ -66,19 +91,7 @@ export default function prismIncludeLanguages(PrismObject) {
         'annotation': /@param(?![\w-])/
       }
     },
-    'action-template': {
-      pattern: /<%(?:\\.|[^\\])*?%>/,
-      greedy: true,
-      alias: 'string',
-      inside: {
-        'punctuation': /^<%|%>$/,
-        'interpolation': interpolation,
-        'escape': {
-          pattern: /\\./,
-          alias: 'char'
-        }
-      }
-    },
+    'action-template': actionTemplate,
     'string': {
       pattern: /"(?:\\.|[^\\"\r\n])*"/,
       greedy: true,

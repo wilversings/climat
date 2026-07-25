@@ -30,7 +30,7 @@ internal fun decodeTemplate(cliDsl: String, templateEntries: List<ActionTemplate
         val actionTemplateInterpolation = entry.actionTemplateInterpolation()
 
         when {
-            actionTemplateContent != null -> SimpleString(actionTemplateContent.text.unescape('@').unescape("%>"))
+            actionTemplateContent != null -> SimpleString(actionTemplateContent.text.unescape('@').unescape('}'))
 
             actionTemplateInterpolation != null -> Interpolation(
                 name = actionTemplateInterpolation.assertRequire(cliDsl) { Interpolation_IDENTIFIER() }.text,

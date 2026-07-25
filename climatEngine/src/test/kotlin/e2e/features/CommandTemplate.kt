@@ -10,13 +10,13 @@ class CommandTemplate : E2ETestBase() {
         """
             hello-world(goodDay: flag) {
                 sub foo {
-                    action <% echo Hello World @{goodDay} %>
+                    action { echo Hello World @{goodDay} }
                 }
                 sub bar {
-                    action <% echo Hello World @{goodDay ? "today-is-a-good-day"} %>
+                    action { echo Hello World @{goodDay ? "today-is-a-good-day"} }
                 }
                 sub baz {
-                    action <% echo Hello World @{!goodDay ? "today-is-NOT-a-good-day"} %>
+                    action { echo Hello World @{!goodDay ? "today-is-NOT-a-good-day"} }
                 }
             }
         """
@@ -40,10 +40,10 @@ class CommandTemplate : E2ETestBase() {
         """
             hello-world(dayOfTheWeek: arg) {
                 sub foo {
-                    action <% echo Hello World @{dayOfTheWeek} %>
+                    action { echo Hello World @{dayOfTheWeek} }
                 }
                 sub bar {
-                    action <% echo Hello World @{dayOfTheWeek ? "--today-is={}"} %>
+                    action { echo Hello World @{dayOfTheWeek ? "--today-is={}"} }
                 }
             }
         """
@@ -59,16 +59,16 @@ class CommandTemplate : E2ETestBase() {
         """
             hello-world(day: arg?, name: arg?) {
                 sub spaced {
-                    action <% echo @{day ? "--today-is {}"} %>
+                    action { echo @{day ? "--today-is {}"} }
                 }
                 sub short {
-                    action <% echo @{day ? "-t{}"} %>
+                    action { echo @{day ? "-t{}"} }
                 }
                 sub repeated {
-                    action <% echo @{name ? "--user={} --owner={}"} %>
+                    action { echo @{name ? "--user={} --owner={}"} }
                 }
                 sub noPlaceholder {
-                    action <% echo @{day ? "--has-a-day"} %>
+                    action { echo @{day ? "--has-a-day"} }
                 }
             }
         """
@@ -91,7 +91,7 @@ class CommandTemplate : E2ETestBase() {
     fun mappingEscapes() {
         """
             hello-world(name: arg) {
-                action <% echo @{name ? "--say=\"{}\" --literal=\{}"} %>
+                action { echo @{name ? "--say=\"{}\" --literal=\{}"} }
             }
         """
             .assertResults(

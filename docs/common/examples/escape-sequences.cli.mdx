@@ -5,11 +5,18 @@ climat_version: 0.0.5
 escape-sequences(arg-statement: arg? = "Default arg values are surrounded by \"") {
 
     const const-statement = "Constant values are surrounded by \""
-    action <%
-        echo Action body is surrounded by <% %\%> &&
+    action {
+        echo Action body is surrounded by braces, so a literal one is written \} &&
         echo @{const-statement} &&
         echo @{arg-statement}
-    %>
+    }
+
+    sub wider-delimiter {
+        // Widening the delimiter is usually nicer than escaping
+        action {{
+            echo A lone } needs no escaping when the body opens with {{
+        }}
+    }
 
 }
 ```

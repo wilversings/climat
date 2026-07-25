@@ -11,11 +11,11 @@ class AllowUnmatched : E2ETestBase() {
             my-root(rootArg: arg) {
                 @allow-unmatched
                 sub child(arg1: arg, arg2: arg) {
-                    action <% echo @{__UNMATCHED} %>
+                    action { echo @{__UNMATCHED} }
                 }
                 
                 sub child2(arg1: arg, arg2: arg) {
-                    action <% echo %>
+                    action { echo }
                 }
             }
         """.assertResults(

@@ -7,6 +7,6 @@ my-toolchain {
   const my-const = "@{my} @{dear} @{constant} @{value}"
 
   sub my-child {
-    action <% echo Child @{my-const} %>
+    action { echo Child @{my-const} }
   }
 }

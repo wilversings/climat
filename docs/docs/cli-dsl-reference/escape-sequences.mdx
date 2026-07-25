@@ -8,7 +8,10 @@ Use backslash to escape certain characters.
 In a arg default value or a constant value surrounded by double quotes `"`
 you can use prefix it with a backslash to escape it into the string. `\"`
 
-Same goes for action body closing markers. `%>` is escaped like this: `\%>`
+An action body opens with a run of one or more `{` and closes with an equally long run of `}`,
+so a `}` run of that exact length is escaped like this: `\}`. Widening the delimiter
+(`action {{ ... }}`, `action {{{ ... }}}`, ...) is usually more readable — a body opened with
+`{{` passes lone `}` characters straight through.
 
 A lone `@` is treated as plain text, so shell usages like `user@host` need no escaping.
 Only the interpolation marker `@{` is special. To write a literal `@{`, escape the `@`: `\@{`

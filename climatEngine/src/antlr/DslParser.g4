@@ -23,7 +23,8 @@ subStatements: rootStatements;
 action: shellAction | javascriptAction | SCOPE_PARAMS;
 
 shellAction: ActionTemplate_BEGIN actionTemplateEntry* ActionTemplate_CLOSE;
-javascriptAction: CustomScript_JAVASCRIPT_BEGIN CustomScript_SCRIPT? CustomScript_END;
+// The script is split into several tokens whenever it contains braces that don't close the body
+javascriptAction: CustomScript_JAVASCRIPT_BEGIN CustomScript_SCRIPT* CustomScript_END;
 
 constDef: CONST IDENTIFIER EQ literal;
 

@@ -9,8 +9,8 @@ import kotlin.test.Test
 class BooleanFlippedMappings {
     private val toolchain = """
         root(arg1: arg, arg2: arg, arg3: flag) {
-            action <% dummy command @{!arg1} %>
-            sub child1() { action <% dummy2 command @{!arg2} @{!arg3} %> }
+            action { dummy command @{!arg1} }
+            sub child1() { action { dummy2 command @{!arg2} @{!arg3} } }
         }
     """
 

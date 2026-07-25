@@ -10,7 +10,7 @@ class Constants : E2ETestBase() {
         """
             my-toolchain {
                 const my-const = "My Dear Constant Value"
-                action <% echo '@{my-const}' %>
+                action { echo '@{my-const}' }
             }
         """
             .assertResults(
@@ -23,9 +23,9 @@ class Constants : E2ETestBase() {
         """
             my-toolchain {
                 const my-const = "My Dear Constant Value"
-                action <% echo 'Root @{my-const}' %>
+                action { echo 'Root @{my-const}' }
                 sub my-child {
-                  action <% echo 'Child @{my-const}' %>
+                  action { echo 'Child @{my-const}' }
                 }
             }
         """
@@ -47,7 +47,7 @@ class Constants : E2ETestBase() {
                 const my-const = "@{my} @{dear} @{constant} @{value}"
                 
                 sub my-child {
-                  action <% echo 'Child @{my-const}' %>
+                  action { echo 'Child @{my-const}' }
                 }
             }
         """
@@ -61,7 +61,7 @@ class Constants : E2ETestBase() {
         """
            my-toolchain {
                 const c = "echo \"HelloWorld!\""
-                action <% @{c};echo "from Cluj-Napoca" %>
+                action { @{c};echo "from Cluj-Napoca" }
            }
         """.assertResults(
             "" to "echo \"HelloWorld!\";echo \"from Cluj-Napoca\""

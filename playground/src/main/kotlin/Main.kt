@@ -28,16 +28,16 @@ import org.w3c.dom.events.KeyboardEvent
 private val DEFAULT_DSL = """
 sgit {
     sub acp(amend a: flag) {
-        action <%
+        action {
             git add . &&
             git commit @{amend ? "--amend"} &&
             git push @{amend ? "--force"}
-        %>
+        }
     }
     sub cf(branch: arg, force f: flag) {
-        action <%
+        action {
             git checkout feature/@{branch} @{force ? "--force"}
-        %>
+        }
     }
 }
 """.trimIndent()
@@ -49,7 +49,7 @@ private const val STORAGE_KEY = "climat-playground-source"
 /**
  * A hand-rolled CodeMirror 6 "legacy stream" tokenizer for the climat DSL (mirrors the modes of
  * the engine's `DslLexer.g4`: top-level keywords/punctuation, line and block comments, `"""`
- * docstrings with `@param` tags, `"..."` strings and `<% %>` action templates (both support
+ * docstrings with `@param` tags, `"..."` strings and `{ ... }` action templates (both support
  * `@{name}` / `@{!name}` / `@{name ? "mapping with a {} placeholder"}` interpolation).
  *
  * This is a simplified/flattened approximation of the ANTLR grammar's lexer modes, good enough
@@ -108,25 +108,34 @@ private val climatLanguage: dynamic = js(
             return 'string';
         }
 
+        // `state.close` is '"' for a string template, or the number of `{` that opened an action body
         function tokenTemplate(stream, state) {
-            if (state.close === '\"' && stream.match('\"')) { state.mode = 'top'; state.close = null; return 'string'; }
-            if (state.close === '%>' && stream.match('%>')) { state.mode = 'top'; state.close = null; return 'meta'; }
+            if (state.close === '\"') {
+                if (stream.match('\"')) { state.mode = 'top'; state.close = null; return 'string'; }
+            } else if (stream.match(new RegExp('^\\}{' + state.close + '}'))) {
+                state.mode = 'top'; state.close = null; return 'meta';
+            }
             if (stream.match(/^\\./)) return 'escape';
             if (stream.match('@{')) { state.mode = 'interpolation'; state.returnClose = state.close; return 'punctuation'; }
-            var rest = state.close === '\"' ? /^[^\\"@]+/ : /^[^\\%@]+/;
+            var rest = state.close === '\"' ? /^[^\\"@]+/ : /^[^\\}@]+/;
             if (stream.match(rest)) return 'string';
             stream.next();
             return 'string';
         }
 
         function tokenTop(stream, state) {
+            var afterAction = state.afterAction;
+            state.afterAction = false;
             if (stream.match('//')) { stream.skipToEnd(); return 'comment'; }
             if (stream.match('/*')) return tokenBlockComment(stream, state);
             if (stream.match('\"\"\"')) { state.mode = 'docstring'; return 'docComment'; }
             if (stream.match('\"')) { state.mode = 'template'; state.close = '\"'; return 'string'; }
-            if (stream.match('<%')) { state.mode = 'template'; state.close = '%>'; return 'meta'; }
+            // An action body opens with a run of `{` and closes with an equally long run of `}`
+            if (afterAction && stream.match(/^\{+/)) {
+                state.mode = 'template'; state.close = stream.current().length; return 'meta';
+            }
             if (stream.match(MODIFIER)) return 'modifier';
-            if (stream.match(KEYWORD)) return 'keyword';
+            if (stream.match(KEYWORD)) { state.afterAction = stream.current() === 'action'; return 'keyword'; }
             if (stream.match(/^[(){}\[\]]/)) return 'bracket';
             if (stream.match(/^[=,:?]/)) return 'punctuation';
             if (stream.match(IDENT)) return 'variableName';
@@ -149,8 +158,8 @@ private val climatLanguage: dynamic = js(
 
         return lang.StreamLanguage.define({
             name: 'climat',
-            startState: function () { return { mode: 'top', close: null, returnClose: null }; },
-            copyState: function (s) { return { mode: s.mode, close: s.close, returnClose: s.returnClose }; },
+            startState: function () { return { mode: 'top', close: null, returnClose: null, afterAction: false }; },
+            copyState: function (s) { return { mode: s.mode, close: s.close, returnClose: s.returnClose, afterAction: s.afterAction }; },
             token: token
         });
     })()

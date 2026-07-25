@@ -48,16 +48,16 @@ Write your macro in `sgit.cli`
 ```cli
 sgit {
     sub acp(amend a: flag) {
-        action <% 
+        action { 
             git add . && 
             git commit @{amend ? "--amend"} && 
             git push @{amend ? "--force"} 
-        %>
+        }
     }
     sub cf(branch: arg, force f: flag) {
-        action <% 
+        action { 
             git checkout feature/@{branch} @{force ? "--force"} 
-        %>
+        }
     }
 }
 ```

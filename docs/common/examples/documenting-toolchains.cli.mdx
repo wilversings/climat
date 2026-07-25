@@ -10,6 +10,6 @@ hello-world {
     @param dayOfWeek - Day of week when you are hello-world-in'.
     """
     sub from(location: arg, dayOfWeek: arg) {
-        action <% echo Hello World from @{location} on this fine @{dayOfWeek} %>
+        action { echo Hello World from @{location} on this fine @{dayOfWeek} }
     }
 }

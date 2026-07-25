@@ -6,6 +6,19 @@ channels {
   COMMENT
 }
 
+@members {
+    // Number of `{` characters that opened the action body currently being lexed. The body ends at
+    // the first run of exactly that many `}` characters, so `action {{ ... }}` may contain lone
+    // braces (shell blocks, `${VAR}`, JavaScript bodies) without any escaping.
+    private var actionBraceCount = 0
+
+    private fun openActionBody() {
+        actionBraceCount = text.count { it == '{' }
+    }
+
+    private fun atActionBodyEnd(): Boolean = text.length == actionBraceCount
+}
+
 EQ : '=' ;
 COMMA : ',' ;
 COLON : ':' ;
@@ -41,12 +54,10 @@ MOD_ALIASES: '@aliases';
 MOD_ALLOW_UNMATCHED: '@allow-unmatched';
 SUB: 'sub';
 
-SCRIPT_ACTION_CONTENT_BEGIN: '<%';
-SCRIPT_ACTION_CONTENT_END: '%>';
-
 // Props
-ActionTemplate_BEGIN: ACTION WS* SCRIPT_ACTION_CONTENT_BEGIN -> pushMode(ActionTemplate);
-CustomScript_JAVASCRIPT_BEGIN: JAVASCRIPT WS* ACTION WS* SCRIPT_ACTION_CONTENT_BEGIN -> pushMode(CustomScript);
+// An action body opens with a run of one or more `{` and closes with an equally long run of `}`.
+ActionTemplate_BEGIN: ACTION WS* LCURLY+ {openActionBody();} -> pushMode(ActionTemplate);
+CustomScript_JAVASCRIPT_BEGIN: JAVASCRIPT WS* ACTION WS* LCURLY+ {openActionBody();} -> pushMode(CustomScript);
 
 // Comments
 MULTILINE_COMMENT: '/*' .*? '*/' -> channel(COMMENT);
@@ -73,8 +84,10 @@ mode ActionTemplate;
 ActionTemplate_Interpolation_OPEN: '@' LCURLY -> pushMode(Interpolation);
 // A lone `@` (not starting an `@{` interpolation) is plain content
 ActionTemplate_AT: '@';
-ActionTemplate_CONTENT: ('\\@' | '\\%' | ~[@%])+;
-ActionTemplate_CLOSE: SCRIPT_ACTION_CONTENT_END -> popMode;
+// A run of `}` only closes the body when it is exactly as long as the opening run of `{`;
+// any other run is content, emitted one brace at a time.
+ActionTemplate_CLOSE: RCURLY+ {atActionBodyEnd()}? -> popMode;
+ActionTemplate_CONTENT: ('\\@' | '\\}' | ~[@}])+ | RCURLY;
 
 mode Interpolation;
 Interpolation_IDENTIFIER: IDENTIFIER;
@@ -101,5 +114,5 @@ mode DocstringRef;
 Docstring_IDENTIFIER: IDENTIFIER WS -> popMode;
 
 mode CustomScript;
-CustomScript_SCRIPT: ('%' ~'>' | ~'%' | '\\%>')+;
-CustomScript_END: SCRIPT_ACTION_CONTENT_END -> popMode;
+CustomScript_END: RCURLY+ {atActionBodyEnd()}? -> popMode;
+CustomScript_SCRIPT: ('\\}' | ~'}')+ | RCURLY;

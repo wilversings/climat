@@ -30,7 +30,7 @@ class ParserSanityCheck : E2ETestBase() {
                p5: arg? = "wat",
                p6: flag) {
                const myConst = "abc @{p1} cde"
-               action <% random action %>
+               action { random action }
             }
             
             sub c4 {
@@ -60,10 +60,31 @@ class ParserSanityCheck : E2ETestBase() {
         """
             root {
                 const cst = "my statement\""
-                action <% echo 'ab\%>' @{cst} %>
+                action { echo 'ab\}' @{cst} }
             }
         """.assertResults(
-            "" to "echo 'ab%>' my statement\""
+            "" to "echo 'ab}' my statement\""
+        )
+    }
+
+    @Test
+    fun testMultiBraceActionDelimiters() {
+        // The body ends at the first run of `}` as long as the run of `{` that opened it, so a
+        // wider delimiter lets braces through unescaped
+        """
+            root {
+                action {{ if true; then echo ${'$'}{HOME}; fi }}
+            }
+        """.assertResults(
+            "" to "if true; then echo ${'$'}{HOME}; fi"
+        )
+
+        """
+            root {
+                action {{{ echo }} }}}
+            }
+        """.assertResults(
+            "" to "echo }}"
         )
     }
 }

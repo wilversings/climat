@@ -9,12 +9,12 @@ class SingleCharacterIdentifiers : E2ETestBase() {
     fun test() {
         """
             a {
-                action <% echo a called! %>
+                action { echo a called! }
                 
                 @alias(r)
                 @aliases(b g)
                 sub c(abc a: flag) {
-                    action <% echo c called! %>
+                    action { echo c called! }
                 }
             }
         """.assertResults(
