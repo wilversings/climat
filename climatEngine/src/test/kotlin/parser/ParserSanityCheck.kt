@@ -29,7 +29,7 @@ class ParserSanityCheck : E2ETestBase() {
             sub c3(p1 s: arg, p2 1: flag, p3: arg?, p4: flag,
                p5: arg? = "wat",
                p6: flag) {
-               const myConst = "abc $(p1) cde"
+               const myConst = "abc @{p1} cde"
                action <% random action %>
             }
             
@@ -60,7 +60,7 @@ class ParserSanityCheck : E2ETestBase() {
         """
             root {
                 const cst = "my statement\""
-                action <% echo 'ab\%>' $(cst) %>
+                action <% echo 'ab\%>' @{cst} %>
             }
         """.assertResults(
             "" to "echo 'ab%>' my statement\""

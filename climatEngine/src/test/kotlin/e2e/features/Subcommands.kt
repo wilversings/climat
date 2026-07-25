@@ -47,7 +47,7 @@ class Subcommands : E2ETestBase() {
                 }
             
                 sub child(p1: arg?) {
-                    action <% echo 'i am child with param $(p1)' %>
+                    action <% echo 'i am child with param @{p1}' %>
                 }
             }
         """

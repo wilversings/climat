@@ -63,19 +63,23 @@ fragment ALPHANUMERIC: [a-zA-Z0-9];
 IDENTIFIER: (ALPHANUMERIC | [_-])+;
 
 mode StringTemplate;
-StringTemplate_CONTENT: ('\\$' | '\\"' | ~[$"])+;
-StringTemplate_Interpolation_OPEN: '$' LPAREN -> pushMode(Interpolation);
+StringTemplate_Interpolation_OPEN: '@' LCURLY -> pushMode(Interpolation);
+// A lone `@` (not starting an `@{` interpolation) is plain content
+StringTemplate_AT: '@';
+StringTemplate_CONTENT: ('\\@' | '\\"' | ~[@"])+;
 StringTemplate_CLOSE: '"' -> popMode;
 
 mode ActionTemplate;
-ActionTemplate_CONTENT: ('\\$' | '\\%' | ~[$%])+;
-ActionTemplate_Interpolation_OPEN: '$' LPAREN -> pushMode(Interpolation);
+ActionTemplate_Interpolation_OPEN: '@' LCURLY -> pushMode(Interpolation);
+// A lone `@` (not starting an `@{` interpolation) is plain content
+ActionTemplate_AT: '@';
+ActionTemplate_CONTENT: ('\\@' | '\\%' | ~[@%])+;
 ActionTemplate_CLOSE: SCRIPT_ACTION_CONTENT_END -> popMode;
 
 mode Interpolation;
 Interpolation_IDENTIFIER: IDENTIFIER;
 Interpolation_COLON: COLON;
-Interpolation_CLOSE: RPAREN -> popMode;
+Interpolation_CLOSE: RCURLY -> popMode;
 Interpolation_WS: WS;
 Interpolation_NEGATE: '!';
 

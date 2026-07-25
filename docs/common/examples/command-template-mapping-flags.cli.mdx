@@ -4,13 +4,13 @@ climat_version: 0.0.5
 ```clidsl title=mapping-flags.cli
 hello-world(goodDay: flag) {
     sub foo {
-        action <% echo Hello World $(goodDay) %>
+        action <% echo Hello World @{goodDay} %>
     }
     sub bar {
-        action <% echo Hello World $(goodDay:today-is-a-good-day) %>
+        action <% echo Hello World @{goodDay:today-is-a-good-day} %>
     }
     sub baz {
-        action <% echo Hello World $(!goodDay:today-is-NOT-a-good-day) %>
+        action <% echo Hello World @{!goodDay:today-is-NOT-a-good-day} %>
     }
 }
 ```

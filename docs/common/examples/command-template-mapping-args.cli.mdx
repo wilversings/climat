@@ -4,10 +4,10 @@ climat_version: 0.0.5
 ```clidsl title=mapping-args.cli
 hello-world(dayOfTheWeek: arg) {
     sub foo {
-        action <% echo Hello World $(dayOfTheWeek) %>
+        action <% echo Hello World @{dayOfTheWeek} %>
     }
     sub bar {
-        action <% echo Hello World $(dayOfTheWeek:--today-is) %>
+        action <% echo Hello World @{dayOfTheWeek:--today-is} %>
     }
 }
 ```

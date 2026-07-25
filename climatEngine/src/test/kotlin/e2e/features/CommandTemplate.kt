@@ -10,13 +10,13 @@ class CommandTemplate : E2ETestBase() {
         """
             hello-world(goodDay: flag) {
                 sub foo {
-                    action <% echo Hello World $(goodDay) %>
+                    action <% echo Hello World @{goodDay} %>
                 }
                 sub bar {
-                    action <% echo Hello World $(goodDay:today-is-a-good-day) %>
+                    action <% echo Hello World @{goodDay:today-is-a-good-day} %>
                 }
                 sub baz {
-                    action <% echo Hello World $(!goodDay:today-is-NOT-a-good-day) %>
+                    action <% echo Hello World @{!goodDay:today-is-NOT-a-good-day} %>
                 }
             }
         """
@@ -40,10 +40,10 @@ class CommandTemplate : E2ETestBase() {
         """
             hello-world(dayOfTheWeek: arg) {
                 sub foo {
-                    action <% echo Hello World $(dayOfTheWeek) %>
+                    action <% echo Hello World @{dayOfTheWeek} %>
                 }
                 sub bar {
-                    action <% echo Hello World $(dayOfTheWeek:--today-is) %>
+                    action <% echo Hello World @{dayOfTheWeek:--today-is} %>
                 }
             }
         """
