@@ -15,7 +15,7 @@ class ParserSanityCheck : E2ETestBase() {
             sub fe() {                           // Single line Comment
             }
             
-            @seal sub js {}
+            @seal sub jse {}
             
             /* Multi
             Line
