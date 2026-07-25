@@ -13,10 +13,10 @@ class CommandTemplate : E2ETestBase() {
                     action <% echo Hello World @{goodDay} %>
                 }
                 sub bar {
-                    action <% echo Hello World @{goodDay:today-is-a-good-day} %>
+                    action <% echo Hello World @{goodDay ? "today-is-a-good-day"} %>
                 }
                 sub baz {
-                    action <% echo Hello World @{!goodDay:today-is-NOT-a-good-day} %>
+                    action <% echo Hello World @{!goodDay ? "today-is-NOT-a-good-day"} %>
                 }
             }
         """
@@ -43,7 +43,7 @@ class CommandTemplate : E2ETestBase() {
                     action <% echo Hello World @{dayOfTheWeek} %>
                 }
                 sub bar {
-                    action <% echo Hello World @{dayOfTheWeek:--today-is} %>
+                    action <% echo Hello World @{dayOfTheWeek ? "--today-is={}"} %>
                 }
             }
         """
@@ -51,6 +51,51 @@ class CommandTemplate : E2ETestBase() {
                 "Tuesday foo" to "echo Hello World 'Tuesday'",
 
                 "Tuesday bar" to "echo Hello World --today-is='Tuesday'",
+            )
+    }
+
+    @Test
+    fun mappingJoinersAndPlaceholderPositions() {
+        """
+            hello-world(day: arg?, name: arg?) {
+                sub spaced {
+                    action <% echo @{day ? "--today-is {}"} %>
+                }
+                sub short {
+                    action <% echo @{day ? "-t{}"} %>
+                }
+                sub repeated {
+                    action <% echo @{name ? "--user={} --owner={}"} %>
+                }
+                sub noPlaceholder {
+                    action <% echo @{day ? "--has-a-day"} %>
+                }
+            }
+        """
+            .assertResults(
+                "--day Tuesday spaced" to "echo --today-is 'Tuesday'",
+                "spaced" to "echo",
+
+                "--day Tuesday short" to "echo -t'Tuesday'",
+                "short" to "echo",
+
+                "--name Ada repeated" to "echo --user='Ada' --owner='Ada'",
+                "repeated" to "echo",
+
+                "--day Tuesday noPlaceholder" to "echo --has-a-day",
+                "noPlaceholder" to "echo"
+            )
+    }
+
+    @Test
+    fun mappingEscapes() {
+        """
+            hello-world(name: arg) {
+                action <% echo @{name ? "--say=\"{}\" --literal=\{}"} %>
+            }
+        """
+            .assertResults(
+                "Ada" to """echo --say="'Ada'" --literal={}"""
             )
     }
 }

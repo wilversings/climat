@@ -13,4 +13,7 @@ Same goes for action body closing markers. `%>` is escaped like this: `\%>`
 A lone `@` is treated as plain text, so shell usages like `user@host` need no escaping.
 Only the interpolation marker `@{` is special. To write a literal `@{`, escape the `@`: `\@{`
 
+Inside the `"..."` of a conditional mapping (`@{x ? "--today-is={}"}`), `{}` is the value
+placeholder — escape the brace to write it literally: `\{}`. A literal `"` there is `\"`
+
 <Comments/>

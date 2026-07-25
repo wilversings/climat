@@ -39,7 +39,8 @@ actionTemplateEntry: actionTemplateContent | actionTemplateInterpolation;
 actionTemplateContent: ActionTemplate_CONTENT | ActionTemplate_AT;
 actionTemplateInterpolation: ActionTemplate_Interpolation_OPEN Interpolation_NEGATE? Interpolation_IDENTIFIER mapping? Interpolation_CLOSE;
 
-mapping: Interpolation_COLON Interpolation_IDENTIFIER;
+mapping: Interpolation_QMARK Interpolation_MAPPING_OPEN mappingTemplateEntry* MappingTemplate_CLOSE;
+mappingTemplateEntry: MappingTemplate_CONTENT | MappingTemplate_LCURLY | MappingTemplate_PLACEHOLDER;
 
 docstring: Docstring_BEGIN docstringEntry* Docstring_END;
 docstringEntry: Docstring_CONTENT | paramTag;

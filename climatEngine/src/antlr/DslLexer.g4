@@ -78,10 +78,19 @@ ActionTemplate_CLOSE: SCRIPT_ACTION_CONTENT_END -> popMode;
 
 mode Interpolation;
 Interpolation_IDENTIFIER: IDENTIFIER;
-Interpolation_COLON: COLON;
+Interpolation_QMARK: QMARK;
+Interpolation_MAPPING_OPEN: '"' -> pushMode(MappingTemplate);
 Interpolation_CLOSE: RCURLY -> popMode;
-Interpolation_WS: WS;
+Interpolation_WS: WS -> channel(WHITESPACE_CHANNEL);
 Interpolation_NEGATE: '!';
+
+// The `"..."` text of a conditional mapping (`@{x ? "--today-is={}"}`). `{}` is the placeholder
+// for the ref's value; write a literal one by escaping the brace (`\{}`).
+mode MappingTemplate;
+MappingTemplate_PLACEHOLDER: LCURLY RCURLY;
+MappingTemplate_CONTENT: ('\\"' | '\\{' | ~["{])+;
+MappingTemplate_LCURLY: LCURLY;
+MappingTemplate_CLOSE: '"' -> popMode;
 
 mode Docstring;
 Docstring_AT_PARAM: '@param' WS -> pushMode(DocstringRef);

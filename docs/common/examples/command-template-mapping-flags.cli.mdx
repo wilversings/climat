@@ -7,10 +7,10 @@ hello-world(goodDay: flag) {
         action <% echo Hello World @{goodDay} %>
     }
     sub bar {
-        action <% echo Hello World @{goodDay:today-is-a-good-day} %>
+        action <% echo Hello World @{goodDay ? "today-is-a-good-day"} %>
     }
     sub baz {
-        action <% echo Hello World @{!goodDay:today-is-NOT-a-good-day} %>
+        action <% echo Hello World @{!goodDay ? "today-is-NOT-a-good-day"} %>
     }
 }
 ```

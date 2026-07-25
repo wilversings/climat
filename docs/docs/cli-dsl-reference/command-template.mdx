@@ -9,11 +9,21 @@ import MappingArgs from "/common/examples/command-template-mapping-args.cli.mdx"
 
 Command templates are used to map the input to any desired command.
 
-# Mapping flags
+# Interpolation forms
 
-Can be done in two ways:
-* Interpolating the string value of flags (i.e. `false` or `true`) into the command string
-* Interpolating or not, a predefined identifier based on the truthness of the flag
+There are two of them, and they read differently on purpose:
+
+* `@{name}` — **plain interpolation**. The value of `name` is dropped into the command as-is
+  (`true`/`false` for a flag, the value for an arg, the empty string for an arg the user left out).
+* `@{name ? "..."}` — **conditional mapping**. The quoted text is emitted only when `name` is
+  *defined*: a flag that is set, or an arg with a value. Otherwise the whole mapping disappears.
+  Inside the quotes, `{}` stands for the value, so you pick the joiner yourself
+  (`--today-is={}`, `--today-is {}`, `-t{}`, or no `{}` at all).
+
+Prefixing the name with `!` (`@{!name ? "..."}`) inverts the condition. This only makes sense for
+flags and boolean constants.
+
+# Mapping flags
 
 <MappingFlags/>
 
@@ -45,10 +55,8 @@ Hello World
 
 # Mapping args
 
-Similar to flags, mapping args can be done in two ways:
- * Interpolating the value
- * Interpolating with a key prefix
- 
+The same two forms apply to args — the difference is that `{}` is where the value lands.
+
 <MappingArgs/>
 
 ```bash title=Console
@@ -58,6 +66,30 @@ Hello World Tuesday
 $ hello-world Tuesday bar
 Hello World --today-is=Tuesday
 ```
+
+Because a mapping is dropped whole when the arg is undefined, an optional arg costs no extra
+plumbing — the option name goes with it:
+
+```clidsl
+greet(name: arg?, greeting: arg?) {
+    action <% say @{greeting ? "--greeting {}"} @{name ? "-n{}"} %>
+}
+```
+
+```bash title=Console
+$ greet
+say
+
+$ greet --name Ada
+say -nAda
+
+$ greet --name Ada --greeting Hi
+say --greeting Hi -nAda
+```
+
+:::note
+To write a literal `{}` inside a mapping, escape the brace: `\{}`. A literal `"` is `\"`.
+:::
 
 # Argument quoting
 
@@ -84,7 +116,7 @@ Because of this you no longer need to hand-quote interpolations (`'@{name}'`) �
 redundant quotes.
 
 :::note
-Only user input is quoted. `const` values and flag mappings are trusted text you wrote in the DSL,
+Only user input is quoted. `const` values and mapping text are trusted text you wrote in the DSL,
 so they are interpolated verbatim (a constant can still hold, say, a shell fragment).
 :::
 

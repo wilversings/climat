@@ -15,12 +15,12 @@ internal class FlagMappedTwice : ValidationBase() {
         ctx.toolchain.action.let { act ->
             if (act is TemplateActionValue) {
                 act.template.refReferences
-                    .filter { it.mapping != null }
-                    .groupBy { it.mapping }
+                    .mapNotNull { it.mapping }
+                    .groupBy { it.text }
                     .values.asSequence()
                     .filter { it.size >= 2 }
                     .map { it.first() } /* TODO: more granularity: sourceMap to reference and not to the whole action */
-                    .map { act.validationEntry("Flag ${it.mapping!!} was mapped more than once") }
+                    .map { act.validationEntry("Mapping ${it.text} was used more than once") }
             } else { emptySequence() }
         }
 }

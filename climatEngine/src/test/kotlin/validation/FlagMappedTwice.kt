@@ -9,10 +9,10 @@ import kotlin.test.Test
 class FlagMappedTwice {
     private val toolchain = """
         root(root_param1: arg, root_param2: arg) {
-            action <% dummy command @{root_param} @{root_param1:dummyCommandParam} @{root_param2:dummyCommandParam} %>
-            
+            action <% dummy command @{root_param} @{root_param1 ? "dummyCommandParam"} @{root_param2 ? "dummyCommandParam"} %>
+
             sub child {
-                action <% dummy2 command @{r:cparam} @{c:cparam} %>
+                action <% dummy2 command @{r ? "cparam"} @{c ? "cparam"} %>
             }
         }
     """

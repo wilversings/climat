@@ -16,64 +16,86 @@ export default function prismIncludeLanguages(PrismObject) {
     require(`prismjs/components/prism-${lang}`);
   });
 
+  // `@{name}` / `@{!name}` / `@{name ? "--opt={}"}`, shared by string and action templates.
+  // Every alternation below is disjoint on its first character, so a pattern that fails to match
+  // does so in linear time — no backtracking blowup on a template that is never terminated.
+  const interpolation = {
+    pattern: /@\{\s*!?\s*[\w-]+(?:\s*\?\s*"(?:\\.|[^\\"])*")?\s*\}/,
+    greedy: true,
+    inside: {
+      'punctuation': /^@\{|\}$/,
+      'mapping': {
+        pattern: /"(?:\\.|[^\\"])*"/,
+        alias: 'string',
+        inside: {
+          // `{}` is the value placeholder; `\{}` is a literal one
+          'placeholder': {
+            pattern: /(^|[^\\])\{\}/,
+            lookbehind: true,
+            alias: 'variable'
+          },
+          'escape': {
+            pattern: /\\./,
+            alias: 'char'
+          }
+        }
+      },
+      'operator': /[!?]/,
+      'variable': /[\w-]+/
+    }
+  };
+
+  // Identifiers may contain `-`, so `\b` is too weak a boundary: it would light up the `arg` in
+  // `my-arg`.
+  const keyword = {
+    pattern: /(^|[^\w-])(?:action|arg|const|default|false|flag|javascript|override|params|scope|sub|true)(?![\w-])/,
+    lookbehind: true,
+    alias: 'keyword'
+  };
+
   PrismObject.languages.clidsl = {
-    'const': {
-      pattern: /(^|\s)const(^|\s)/,
-      alias: 'keyword',
-    },
-    'action': {
-      pattern: /(^|\s)action(^|\s)/,
-      alias: 'keyword'
-    },
-    'children': {
-      pattern: /(^|\s)children(^|\s)/,
-      alias: 'keyword'
-    },
-    'flag': {
-      pattern: /(^|\s)flag(^|\s)/,
-      alias: 'keyword'
-    },
-    'arg': {
-      pattern: /(^|\s)arg(^|\s)/,
-      alias: 'keyword'
-    },
-    'sub': {
-      pattern: /\bsub\b/,
-      alias: 'keyword'
-    },
-    'override_default': {
-      pattern: /\boverride default\b/,
-      alias: 'keyword'
-    },
-    'aliases': {
-      pattern: /\@aliases/,
-      alias: 'keyword'
-    },
-    'alias': {
-      pattern: /\@alias/,
-      alias: 'keyword'
-    },
-    'javascript': {
-      pattern: /javascript/,
-      alias: 'keyword'
-    },
     'comment': {
       pattern: /\/\/.*|\/\*[\s\S]*?(?:\*\/|$)/,
       greedy: true
     },
     'doc': {
       pattern: /"""[\s\S]*?(?:"""|$)/,
+      greedy: true,
       alias: 'comment',
+      inside: {
+        'annotation': /@param(?![\w-])/
+      }
+    },
+    'action-template': {
+      pattern: /<%(?:\\.|[^\\])*?%>/,
+      greedy: true,
+      alias: 'string',
+      inside: {
+        'punctuation': /^<%|%>$/,
+        'interpolation': interpolation,
+        'escape': {
+          pattern: /\\./,
+          alias: 'char'
+        }
+      }
     },
     'string': {
-      pattern: /(^|[^\\])(?:"|<%)(?:\\.|[^\\"\r\n])*(?:"|%>)(?!\s*:)/,
-      lookbehind: true,
-      greedy: true
+      pattern: /"(?:\\.|[^\\"\r\n])*"/,
+      greedy: true,
+      inside: {
+        'interpolation': interpolation,
+        'escape': {
+          pattern: /\\./,
+          alias: 'char'
+        }
+      }
     },
-    'actionContent': {
-      pattern: /(?:^|[^\\])<%(?:.|\n|[^\\])*%>(?!\s*:)/,
-      alias: 'string',
-    }
+    'modifier': {
+      pattern: /@(?:seal|shift|aliases|alias|allow-unmatched)(?![\w-])/,
+      alias: 'keyword'
+    },
+    'keyword': keyword,
+    'punctuation': /[{}()[\],:=?!]/
   }
 
   delete globalThis.Prism;

@@ -30,13 +30,13 @@ sgit {
     sub acp(amend a: flag) {
         action <%
             git add . &&
-            git commit @{amend:--amend} &&
-            git push @{amend:--force}
+            git commit @{amend ? "--amend"} &&
+            git push @{amend ? "--force"}
         %>
     }
     sub cf(branch: arg, force f: flag) {
         action <%
-            git checkout feature/@{branch} @{force:--force}
+            git checkout feature/@{branch} @{force ? "--force"}
         %>
     }
 }
@@ -50,7 +50,7 @@ private const val STORAGE_KEY = "climat-playground-source"
  * A hand-rolled CodeMirror 6 "legacy stream" tokenizer for the climat DSL (mirrors the modes of
  * the engine's `DslLexer.g4`: top-level keywords/punctuation, line and block comments, `"""`
  * docstrings with `@param` tags, `"..."` strings and `<% %>` action templates (both support
- * `$(name)` / `$(!name)` / `$(name:mapping)` interpolation).
+ * `@{name}` / `@{!name}` / `@{name ? "mapping with a {} placeholder"}` interpolation).
  *
  * This is a simplified/flattened approximation of the ANTLR grammar's lexer modes, good enough
  * for editor highlighting without pulling in a full Lezer grammar.
@@ -90,20 +90,30 @@ private val climatLanguage: dynamic = js(
 
         function tokenInterpolation(stream, state) {
             stream.eatSpace();
-            if (stream.match(')')) { state.mode = 'template'; state.close = state.returnClose; state.returnClose = null; return 'punctuation'; }
+            if (stream.match('}')) { state.mode = 'template'; state.close = state.returnClose; state.returnClose = null; return 'punctuation'; }
             if (stream.match('!')) return 'operator';
-            if (stream.match(':')) return 'punctuation';
+            if (stream.match('?')) return 'punctuation';
+            if (stream.match('\"')) { state.mode = 'mapping'; return 'string'; }
             if (stream.match(IDENT)) return 'variableName';
             stream.next();
             return null;
+        }
+
+        function tokenMapping(stream, state) {
+            if (stream.match('\"')) { state.mode = 'interpolation'; return 'string'; }
+            if (stream.match('{}')) return 'operator';
+            if (stream.match(/^\\./)) return 'escape';
+            if (stream.match(/^[^\\"{]+/)) return 'string';
+            stream.next();
+            return 'string';
         }
 
         function tokenTemplate(stream, state) {
             if (state.close === '\"' && stream.match('\"')) { state.mode = 'top'; state.close = null; return 'string'; }
             if (state.close === '%>' && stream.match('%>')) { state.mode = 'top'; state.close = null; return 'meta'; }
             if (stream.match(/^\\./)) return 'escape';
-            if (stream.match(/^\${'$'}\(/)) { state.mode = 'interpolation'; state.returnClose = state.close; return 'punctuation'; }
-            var rest = state.close === '\"' ? /^[^\\"${'$'}]+/ : /^[^\\%${'$'}]+/;
+            if (stream.match('@{')) { state.mode = 'interpolation'; state.returnClose = state.close; return 'punctuation'; }
+            var rest = state.close === '\"' ? /^[^\\"@]+/ : /^[^\\%@]+/;
             if (stream.match(rest)) return 'string';
             stream.next();
             return 'string';
@@ -132,6 +142,7 @@ private val climatLanguage: dynamic = js(
                 case 'docstringRef': return tokenDocstringRef(stream, state);
                 case 'template': return tokenTemplate(stream, state);
                 case 'interpolation': return tokenInterpolation(stream, state);
+                case 'mapping': return tokenMapping(stream, state);
                 default: return tokenTop(stream, state);
             }
         }
