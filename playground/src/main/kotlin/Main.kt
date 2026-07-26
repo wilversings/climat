@@ -198,7 +198,7 @@ private val makeEditor: dynamic = js(
         });
         return new EditorView({
             doc: doc,
-            extensions: [cm.basicSetup, langExt, highlightExt, listener],
+            extensions: [cm.basicSetup, langExt, highlightExt, listener, EditorView.lineWrapping],
             parent: parent
         });
     })

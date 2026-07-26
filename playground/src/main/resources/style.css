@@ -13,10 +13,13 @@
 }
 
 * { box-sizing: border-box; }
+*, *::before, *::after { -webkit-tap-highlight-color: transparent; }
 
 html, body {
     margin: 0;
     height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
     background: var(--bg);
     color: var(--fg);
 }
@@ -25,13 +28,18 @@ html, body {
     display: flex;
     flex-direction: column;
     height: 100vh;
+    height: 100dvh;
 }
 
 #topbar {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
-    gap: 12px;
+    gap: 4px 12px;
     padding: 12px 18px;
+    padding-top: max(12px, env(safe-area-inset-top));
+    padding-left: max(18px, env(safe-area-inset-left));
+    padding-right: max(18px, env(safe-area-inset-right));
     border-bottom: 1px solid var(--border);
     background: var(--panel);
 }
@@ -58,6 +66,7 @@ html, body {
     display: flex;
     flex-direction: column;
     min-height: 0;
+    min-width: 0;
     background: var(--bg);
 }
 
@@ -132,16 +141,20 @@ html, body {
     align-items: center;
     gap: 8px;
     padding: 10px 14px;
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+    padding-left: max(14px, env(safe-area-inset-left));
+    padding-right: max(14px, env(safe-area-inset-right));
     border-top: 1px solid var(--border);
     background: var(--panel);
     font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
     font-size: 13px;
 }
 
-#shell-prompt { color: var(--accent); font-weight: 600; }
+#shell-prompt { color: var(--accent); font-weight: 600; flex-shrink: 0; }
 
 #shell-input {
     flex: 1;
+    min-width: 0;
     background: transparent;
     border: none;
     outline: none;
@@ -152,5 +165,29 @@ html, body {
 #shell-input::placeholder { color: var(--muted); opacity: 0.7; }
 
 @media (max-width: 780px) {
-    #panes { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+    #panes { grid-template-columns: 1fr; grid-template-rows: 3fr 2fr; }
+
+    /* iOS zooms the page on focus of any input under 16px; keep it at 16px on touch-sized screens. */
+    #shell-input { font-size: 16px; }
+
+    #diagnostics { height: 28%; min-height: 70px; }
+}
+
+@media (max-width: 780px) and (orientation: landscape) {
+    /* Short/landscape phones have width to spare but little height — stacking
+       the panes would leave almost no room for either one, so keep them
+       side by side instead. */
+    #panes { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr; }
+}
+
+@media (max-width: 560px) {
+    #topbar { padding: 10px 14px; gap: 2px 10px; }
+    #topbar .logo { font-size: 16px; }
+    #topbar .tagline { font-size: 12px; flex-basis: 100%; }
+
+    .pane-header { padding: 6px 10px; font-size: 11px; }
+
+    #shell-output { padding: 10px; font-size: 13px; }
+
+    #shell-prompt-line { padding: 8px 10px; }
 }
