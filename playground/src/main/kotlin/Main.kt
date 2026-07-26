@@ -7,6 +7,7 @@ import com.climat.library.domain.action.ActionValueBase
 import com.climat.library.domain.action.JavaScriptActionValue
 import com.climat.library.domain.action.NoopActionValue
 import com.climat.library.domain.action.ScopeParamsActionValue
+import com.climat.library.domain.action.MicroshellActionValue
 import com.climat.library.domain.action.TemplateActionValue
 import com.climat.library.validation.ValidationResult
 import kotlinx.browser.document
@@ -386,6 +387,8 @@ private fun runCommand(line: String) {
 private fun handleAction(action: ActionValueBase<*>) {
     when (action) {
         is TemplateActionValue -> printLine((action.value ?: "").trim(), "cmd")
+        // The playground has no binary and executes nothing; `value` is the plan's rendering.
+        is MicroshellActionValue -> printLine((action.value ?: "").trim(), "cmd")
         is JavaScriptActionValue -> runCustomScript(action)
         is ScopeParamsActionValue -> printLine("[scope-params action — nothing to print]", "note")
         is NoopActionValue -> { /* nothing to do */ }

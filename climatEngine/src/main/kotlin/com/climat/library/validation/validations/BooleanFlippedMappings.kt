@@ -1,6 +1,6 @@
 package com.climat.library.validation.validations
 
-import com.climat.library.domain.action.TemplateActionValue
+import com.climat.library.domain.action.templateOrNull
 import com.climat.library.domain.ref.ArgDefinition
 import com.climat.library.validation.ValidationBase
 import com.climat.library.validation.ValidationContext
@@ -14,14 +14,15 @@ internal class BooleanFlippedMappings : ValidationBase() {
 
     override fun validate(ctx: ValidationContext): Sequence<ValidationEntry> =
         ctx.toolchain.action.let { act ->
-            if (act is TemplateActionValue) {
+            val template = act.templateOrNull
+            if (template != null) {
                 getScopeRefs(ctx)
                     .values
                     .map { it.last() }
                     .filterIsInstance<ArgDefinition>()
                     .map { it.name }
                     .intersect(
-                        act.template.refReferences
+                        template.refReferences
                             .filter { it.isFlipped }
                             .map { it.name }
                             .toSet()

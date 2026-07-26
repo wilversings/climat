@@ -84,14 +84,54 @@ kotlin {
     }
 }
 
+// Every supported microshell target ships inside the single npm package. At ~520 KB each that is
+// ~1.5 MB total — cheap enough to avoid per-platform packages and their publish-ordering hazards.
+val microshellTargets =
+    mapOf(
+        "LinuxX64" to ("linuxX64" to "linux-x64"),
+        "MacosX64" to ("macosX64" to "darwin-x64"),
+        "MacosArm64" to ("macosArm64" to "darwin-arm64"),
+    )
+
 tasks {
     register<Copy>("copyLicenceAndReadme") {
         from("LICENSE.md", "README.md")
         into("build/js/packages/${project.name}")
         dependsOn("kotlinNpmInstall")
     }
+
+    register<Copy>("copyMicroshellBinaries") {
+        description = "Stages the microshell binaries so webpack can bundle them into the npm package."
+        dependsOn("kotlinNpmInstall")
+        val microshell = project(":microshell")
+        microshellTargets.forEach { (taskSuffix, names) ->
+            val (buildDirName, npmName) = names
+            // Apple targets are disabled on a Linux host (and vice versa); those links are skipped
+            // and simply contribute no file, so a local build still produces a working package for
+            // the host platform.
+            dependsOn("${microshell.path}:linkReleaseExecutable$taskSuffix")
+            from(microshell.layout.buildDirectory.file("bin/$buildDirName/releaseExecutable/climat-msh.kexe")) {
+                rename { "climat-msh-$npmName" }
+            }
+        }
+        into("build/js/packages/${project.name}/msh")
+    }
+
     named("jsBrowserProductionWebpack") {
-        dependsOn("copyLicenceAndReadme")
+        dependsOn("copyLicenceAndReadme", "copyMicroshellBinaries")
+    }
+
+    named("jsBrowserDistribution") {
+        // webpack's CopyPlugin does not preserve file modes, so the binaries arrive non-executable
+        // and every `act microsh` would die with EACCES. Restore the bit on the packaged output.
+        doLast {
+            layout.buildDirectory
+                .dir("dist/js/productionExecutable/msh")
+                .get()
+                .asFile
+                .listFiles()
+                ?.forEach { it.setExecutable(true, false) }
+        }
     }
 }
 

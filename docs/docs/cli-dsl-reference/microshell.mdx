@@ -1,0 +1,104 @@
+---
+title: Microshell
+---
+
+# Microshell
+
+`act sh { ... }` hands your command to the system shell (`/bin/sh`). That works, but it means your
+toolchain behaves however the local shell happens to behave, and it requires one to be installed.
+
+`act microsh { ... }` runs the command in a small shell embedded in climat instead. No `/bin/sh` is
+involved.
+
+```cli
+my-toolchain {
+    act microsh { git add . && git commit -m 'wip' }
+}
+```
+
+# Why you might want it
+
+**Portability.** The embedded shell ships with climat, so a toolchain behaves the same everywhere
+rather than inheriting whatever `sh` points at.
+
+**Interpolated values can never become syntax.** This is the important one. With `act sh`, the
+action is rendered into a string that the shell then re-parses, so climat has to defend the values
+by quoting them. With `act microsh`, the command is parsed *before* interpolation, and each
+`@{ref}` becomes exactly one argument:
+
+```cli
+my-toolchain(msg: arg) {
+    act microsh { echo @{msg} }
+}
+```
+
+```sh title=Console
+$ my-toolchain "hello world"
+hello world
+
+$ my-toolchain "a; rm -rf /"
+a; rm -rf /
+```
+
+The second value is printed, not executed — and not because it was escaped, but because it was
+never in a position to be read as syntax.
+
+That also means a value containing spaces needs no quoting to survive as a single argument.
+
+# What it supports
+
+| | |
+|---|---|
+| `cmd1 \| cmd2` | pipelines |
+| `cmd1 && cmd2` | run the second only if the first succeeded |
+| `cmd1 \|\| cmd2` | run the second only if the first failed |
+| `cmd1 ; cmd2` | run both in order |
+| `( ... )` | grouping, to override precedence |
+| `VAR=value cmd` | an environment variable for that one command |
+| `'...'` | literal text, including spaces |
+
+Precedence goes, loosest to tightest: `;`, then `&&` and `||` (equal, evaluated left to right),
+then `|` — the same as in a POSIX shell.
+
+Newlines inside the body are ordinary whitespace, so a long command can be wrapped freely.
+
+# What it does not support
+
+Deliberately absent in this version:
+
+* `$VAR` expansion, `"double quotes"` and backslash escapes — use `@{ref}` and `'single quotes'`
+* redirection (`>`, `<`, `2>&1`)
+* command substitution (`` `cmd` ``, `$(cmd)`)
+* globbing (`*.txt`), `~` expansion, and background jobs (`&`)
+
+These are rejected when the toolchain is parsed, not at run time, so you find out immediately rather
+than when the macro runs.
+
+`act sh` remains available and unchanged — reach for it when you need the full shell.
+
+# Quoting
+
+There is no `"..."` form, and `'...'` is purely literal: no expansion, no escapes. It exists only so
+a literal space can sit inside one argument.
+
+```cli
+my-toolchain {
+    act microsh { git commit -m 'work in progress' }
+}
+```
+
+For anything dynamic, use `@{ref}` — it already yields a single argument, whatever the value
+contains.
+
+# Platform support
+
+The microshell is a small native binary bundled with climat. It ships for Linux (x64) and macOS
+(Intel and Apple Silicon). On any other platform `act microsh` reports that it is unavailable and
+suggests `act sh`, rather than silently falling back — falling back would reintroduce exactly the
+inconsistency the microshell exists to remove.
+
+On Alpine (and other musl distributions) the binary needs glibc compatibility:
+
+```sh
+apk add gcompat libgcc
+```

@@ -36,6 +36,7 @@ FALSE: 'false';
 ACT: 'act';
 SH: 'sh';
 JS: 'js';
+MICROSH: 'microsh';
 
 // Parameters
 FLAG: 'flag';
@@ -57,6 +58,9 @@ SUB: 'sub';
 // An action body opens with a run of one or more `{` and closes with an equally long run of `}`.
 ActionTemplate_BEGIN: ACT WS* SH WS* LCURLY+ {openActionBody();} -> pushMode(ActionTemplate);
 CustomScript_JS_BEGIN: ACT WS* JS WS* LCURLY+ {openActionBody();} -> pushMode(CustomScript);
+// The embedded microshell reuses the ActionTemplate mode verbatim: the body is lexed into the same
+// content/interpolation tokens, and the microshell parser takes it from there.
+MicroshellTemplate_BEGIN: ACT WS* MICROSH WS* LCURLY+ {openActionBody();} -> pushMode(ActionTemplate);
 
 // Comments
 MULTILINE_COMMENT: '/*' .*? '*/' -> channel(COMMENT);

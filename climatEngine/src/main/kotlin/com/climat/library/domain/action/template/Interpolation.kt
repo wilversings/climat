@@ -33,6 +33,37 @@ internal class Interpolation(
         }
     }
 
+    /**
+     * The ref's values as argv entries, for the microshell.
+     *
+     * Deliberately no [shellSingleQuote]: these never reach a shell lexer, so quoting here would end
+     * up *inside* the argument. An undefined ref yields no entries at all, which drops the word it
+     * sits in. An array yields one entry per element rather than a single space-joined blob.
+     */
+    fun rawValues(values: Collection<RefWithAnyValue>): List<String> {
+        val refWithValue = refFor(values)
+
+        return if (mapping != null) {
+            if (isDefined(refWithValue) xor isFlipped) {
+                listOf(mapping.render(rawList(refWithValue).joinToString(" ")))
+            } else {
+                emptyList()
+            }
+        } else {
+            rawList(refWithValue)
+        }
+    }
+
+    private fun refFor(values: Collection<RefWithAnyValue>): RefWithAnyValue =
+        values.find { it.ref.name == name }
+            ?: throw IllegalArgumentException("Could not find ref named `$name` inside the collection")
+
+    private fun rawList(refWithValue: RefWithValue<*>): List<String> =
+        when (val value = refWithValue.value) {
+            is Array<*> -> value.map { it.toString() }
+            else -> listOf(value.toString())
+        }
+
     // A mapping is rendered only when its ref carries something: a flag (or boolean constant) that is
     // set, or an arg/constant/passthrough with a non-empty value. Anything else — an optional arg the
     // user left out, an unset flag — drops the whole mapping, joiner and all.

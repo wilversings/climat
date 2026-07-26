@@ -1,9 +1,12 @@
 package com.climat.library.domain.action.template
 
 import com.climat.library.domain.ref.RefWithAnyValue
+import com.climat.microshell.Hole
+import com.climat.microshell.Literal
+import com.climat.microshell.Segment
 
 internal class Template(
-    private val pieces: List<IPiece>,
+    internal val pieces: List<IPiece>,
 ) {
     // Renders the template, collapsing whitespace at the seams between pieces (e.g. around an
     // interpolation that expanded to nothing) to a single space. Interpolated argument values are
@@ -23,4 +26,20 @@ internal class Template(
     }
 
     val refReferences: List<Interpolation> = pieces.filterIsInstance<Interpolation>()
+
+    /**
+     * The template as microshell input: literal text **verbatim** (the microshell does its own
+     * whitespace handling, so [SimpleString.str]'s collapsing must not be applied here) and each
+     * interpolation as an opaque hole indexing into [refReferences].
+     */
+    fun toSegments(): List<Segment> {
+        var hole = 0
+        return pieces.map { piece ->
+            when (piece) {
+                is SimpleString -> Literal(piece.value)
+                is Interpolation -> Hole(hole++)
+                else -> throw IllegalStateException("Unsupported template piece `${piece::class}`")
+            }
+        }
+    }
 }

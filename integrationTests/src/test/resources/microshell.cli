@@ -1,0 +1,27 @@
+microsh-test {
+  // --- fidelity: these must behave exactly as /bin/sh does ---
+  sub early-exit { act microsh { yes hello | head -3 } }
+  sub never-reads { act microsh { yes hello | true } }
+  sub three-stage { act microsh { yes hello | head -100 | wc -l } }
+  sub sh-early-exit { act sh { yes hello | head -3 } }
+
+  // --- operators ---
+  sub piped { act microsh { echo abc | tr a b } }
+  sub and-ok { act microsh { true && echo and-ok } }
+  sub and-short-circuits { act microsh { false && echo NOPE } }
+  sub or-fallback { act microsh { false || echo or-fallback } }
+  sub sequence { act microsh { echo one ; echo two } }
+  sub grouped { act microsh { (false || true) && echo grouped-ok } }
+  sub env-prefix { act microsh { KEY=from-plan env } }
+  sub quoted { act microsh { echo 'two words' } }
+
+  // --- statuses ---
+  sub failing { act microsh { false } }
+  sub not-found { act microsh { definitely-not-a-real-command } }
+
+  // --- interpolation ---
+  sub echo-arg(msg: arg) { act microsh { echo @{msg} } }
+  sub mapped(name: arg?, loud: flag) {
+    act microsh { echo tail @{name ? "--name={}"} @{loud ? "--loud"} }
+  }
+}

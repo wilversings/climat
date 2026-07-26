@@ -14,6 +14,9 @@ kotlin {
                 api(kotlin("stdlib-common"))
                 api("com.strumenta:antlr-kotlin-runtime:1.0.12")
                 api("org.lighthousegames:logging:1.5.0")
+                // `api`, not `implementation`: MicroshellActionValue.plan is a microshell type and
+                // the root module consumes it.
+                api(project(":microshell"))
             }
             kotlin.srcDir("build/generated-src/commonAntlr/kotlin")
             kotlin.srcDir("src/main/kotlin")

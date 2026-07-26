@@ -1,6 +1,6 @@
 package com.climat.library.validation.validations
 
-import com.climat.library.domain.action.TemplateActionValue
+import com.climat.library.domain.action.templateOrNull
 import com.climat.library.validation.ValidationBase
 import com.climat.library.validation.ValidationContext
 import com.climat.library.validation.ValidationEntry
@@ -13,8 +13,9 @@ internal class FlagMappedTwice : ValidationBase() {
     override val code = ValidationCode.FlagMappedTwice
     override fun validate(ctx: ValidationContext): Sequence<ValidationEntry> =
         ctx.toolchain.action.let { act ->
-            if (act is TemplateActionValue) {
-                act.template.refReferences
+            val template = act.templateOrNull
+            if (template != null) {
+                template.refReferences
                     .mapNotNull { it.mapping }
                     .groupBy { it.text }
                     .values.asSequence()

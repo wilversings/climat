@@ -15,6 +15,7 @@ abstract class ActionValueBase<VType> internal constructor() : SourceTraceable()
 
     val type: Type = when (this) {
         is TemplateActionValue -> Type.Template
+        is MicroshellActionValue -> Type.Microshell
         is JavaScriptActionValue -> Type.CustomScript
         is ScopeParamsActionValue -> Type.ScopeParams
         is NoopActionValue -> Type.Noop
@@ -23,6 +24,7 @@ abstract class ActionValueBase<VType> internal constructor() : SourceTraceable()
 
     enum class Type {
         Template,
+        Microshell,
         CustomScript,
         ScopeParams,
         Noop

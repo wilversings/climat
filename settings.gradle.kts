@@ -3,6 +3,7 @@ plugins {
 }
 
 rootProject.name = "climat"
+include("microshell")
 include("climatEngine")
 include("integrationTests")
 include("playground")

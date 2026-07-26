@@ -14,6 +14,12 @@ Climat parses the DSL (ANTLR grammar) and installs it as a real CLI command.
 
 - `src/main/kotlin` — the CLI entry point / runtime (`Main.kt`, `ClimatCli.kt`, `AsyncClimatCli.kt`, install logic,
   platform-specific code under `platform/`, console output under `output/`).
+- `microshell/` — the embedded shell behind `act microsh { ... }`. `commonMain` holds the parser and
+  plan model (shared with the JS side so bodies are parsed at DSL-decode time); `nativeMain` holds
+  the executor, which uses real `pipe(2)`/`fork`/`dup2`/`execvp` via `platform.posix`. Built for
+  `linuxX64`, `macosX64` and `macosArm64`; all three binaries are bundled into the npm package under
+  `msh/`. Node cannot host this: libuv wires stdio `'pipe'` as a Unix socketpair, so an early-exiting
+  consumer gives the producer `ECONNRESET` (visible stderr noise, wrong status) instead of `SIGPIPE`.
 - `climatEngine/` — the core library: DSL parsing (ANTLR grammar in `climatEngine/src/antlr/*.g4`), the
   `dslParser` (turns parsed DSL into a domain model under `domain`), `commandParser` (turns parsed CLI args +
   domain model into an executable toolchain), and `validation` (structural checks on a parsed DSL tree, e.g.

@@ -44,6 +44,7 @@ class ClimatCli {
             val pathToManifest = join(wd, MAIN_MANIFEST_NAME)
             if (Fs.pathExists(pathToManifest).await()) {
                 exec(pathToManifest, command)
+                return
             }
 
             wd = join(wd, "..")

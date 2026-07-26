@@ -30,6 +30,7 @@ const sidebars = {
     'cli-dsl-reference/constants',
     'cli-dsl-reference/parameters',
     'cli-dsl-reference/command-template',
+    'cli-dsl-reference/microshell',
     'cli-dsl-reference/javascript',
     'cli-dsl-reference/documenting-toolchains',
     'cli-dsl-reference/escape-sequences',

@@ -1,6 +1,6 @@
 package com.climat.library.validation.validations
 
-import com.climat.library.domain.action.TemplateActionValue
+import com.climat.library.domain.action.templateOrNull
 import com.climat.library.utils.not
 import com.climat.library.validation.ValidationBase
 import com.climat.library.validation.ValidationContext
@@ -15,8 +15,9 @@ internal class UndefinedParams : ValidationBase() {
     override fun validate(ctx: ValidationContext): Sequence<ValidationEntry> =
         getScopeRefs(ctx).let { scopeParams ->
             val act = ctx.toolchain.action
-            if (act is TemplateActionValue)
-                act.template.refReferences
+            val template = act.templateOrNull
+            if (template != null)
+                template.refReferences
                     .asSequence()
                     .map { it.name }
                     .distinct()
