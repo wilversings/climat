@@ -71,8 +71,16 @@ Deliberately absent in this version:
 * command substitution (`` `cmd` ``, `$(cmd)`)
 * globbing (`*.txt`), `~` expansion, and background jobs (`&`)
 
-These are rejected when the toolchain is parsed, not at run time, so you find out immediately rather
-than when the macro runs.
+Using one of these is an error, reported when the macro runs:
+
+```sh title=Console
+$ my-toolchain
+climat-msh: `$` expansion is not supported — use `@{ref}`
+```
+
+The microshell language is independent of the climat DSL: climat does not parse the body, it only
+resolves the `@{ref}`s inside it. So a malformed body installs fine and is reported on use, not at
+`climat install` time.
 
 `act sh` remains available and unchanged — reach for it when you need the full shell.
 

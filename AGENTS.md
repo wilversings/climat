@@ -14,12 +14,17 @@ Climat parses the DSL (ANTLR grammar) and installs it as a real CLI command.
 
 - `src/main/kotlin` — the CLI entry point / runtime (`Main.kt`, `ClimatCli.kt`, `AsyncClimatCli.kt`, install logic,
   platform-specific code under `platform/`, console output under `output/`).
-- `microshell/` — the embedded shell behind `act microsh { ... }`. `commonMain` holds the parser and
-  plan model (shared with the JS side so bodies are parsed at DSL-decode time); `nativeMain` holds
-  the executor, which uses real `pipe(2)`/`fork`/`dup2`/`execvp` via `platform.posix`. Built for
-  `linuxX64`, `macosX64` and `macosArm64`; all three binaries are bundled into the npm package under
-  `msh/`. Node cannot host this: libuv wires stdio `'pipe'` as a Unix socketpair, so an early-exiting
-  consumer gives the producer `ECONNRESET` (visible stderr noise, wrong status) instead of `SIGPIPE`.
+- `microshell/` — the embedded shell behind `act microsh { ... }`, deliberately **independent of the
+  climat DSL**: it owns its own language, and climat never parses shell syntax. `commonMain` holds
+  the parser; `nativeMain` holds the executor, which uses real `pipe(2)`/`fork`/`dup2`/`execvp` via
+  `platform.posix`. Both run in the binary at execution time, so a malformed body is reported when
+  the macro runs, not at `climat install`. climat passes the body as tagged `argv` pairs — literal
+  DSL text and already-resolved ref values (`t "echo " v "a; rm -rf /"`), which is what stops a value
+  from ever being lexed as syntax. Built for `linuxX64`, `macosX64` and `macosArm64`; all three
+  binaries ship inside the npm package under `msh/`. Node cannot host the executor: libuv wires stdio
+  `'pipe'` as a Unix socketpair, so an early-exiting consumer gives the producer `ECONNRESET`
+  (visible stderr noise, wrong status) instead of `SIGPIPE`. Keep `Regex` out of this module — it
+  links the whole regex engine and roughly doubles the shipped binary.
 - `climatEngine/` — the core library: DSL parsing (ANTLR grammar in `climatEngine/src/antlr/*.g4`), the
   `dslParser` (turns parsed DSL into a domain model under `domain`), `commandParser` (turns parsed CLI args +
   domain model into an executable toolchain), and `validation` (structural checks on a parsed DSL tree, e.g.

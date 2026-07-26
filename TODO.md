@@ -21,6 +21,13 @@ Done: the `microshell` module (parser in `commonMain`, native executor in `nativ
 `act microsh { ... }` action. Supports `|`, `&&`, `||`, `;`, `( )`, `VAR=value cmd` and literal
 `'...'`.
 
+The two languages are kept **decoupled**: `climatEngine` does not depend on `microshell` and never
+parses shell syntax. It resolves refs and hands over tagged segments — literal DSL text and resolved
+values (`t "echo " v "a; rm -rf /"`) — and the binary parses at run time. That is what keeps a value
+from ever being read as syntax, and it means a malformed body is reported on use rather than at
+`climat install`. Coupling them (e.g. moving the shell grammar into the ANTLR DSL) is a deliberate
+future option, once both languages are mature.
+
 Deferred from the original list:
 - Bash-compatible `$VAR` expansion, double quotes and escapes were dropped for v1. `@{ref}` covers
   the real need: it always yields exactly one argument, so a value with spaces needs no quoting and

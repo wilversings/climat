@@ -19,6 +19,11 @@ microsh-test {
   sub failing { act microsh { false } }
   sub not-found { act microsh { definitely-not-a-real-command } }
 
+  // --- malformed bodies ---
+  // The DSL does not parse shell syntax, so these install fine and fail when run.
+  sub unbalanced { act microsh { (a && b } }
+  sub dollar-expansion { act microsh { echo $HOME } }
+
   // --- interpolation ---
   sub echo-arg(msg: arg) { act microsh { echo @{msg} } }
   sub mapped(name: arg?, loud: flag) {

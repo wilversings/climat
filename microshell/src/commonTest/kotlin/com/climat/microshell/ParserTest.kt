@@ -3,41 +3,45 @@ package com.climat.microshell
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertTrue
 
 private fun parseText(text: String): Node = parse(listOf(Literal(text)))
 
-/** Resolves every hole to `<id>` so structure is easy to assert on. */
-private fun Node.render(values: Map<Int, String> = emptyMap()): ResolvedNode =
-    resolve { hole -> listOf(values[hole.id] ?: "<${hole.id}>") }
+/** The argv a parsed body would execute, flattened for readable assertions. */
+private fun Node.argv(): List<List<String>> = when (this) {
+    is Seq -> items.flatMap { it.argv() }
+    is AndOr -> left.argv() + right.argv()
+    is Pipeline -> stages.flatMap { it.argv() }
+    is Group -> body.argv()
+    is Command -> listOf(words.flatMap { it.toArgv() })
+}
 
-private fun Node.renderMulti(values: Map<Int, List<String>>): ResolvedNode =
-    resolve { hole -> values[hole.id] ?: listOf("<${hole.id}>") }
-
-private fun cmd(vararg argv: String) = RCommand(emptyList(), argv.toList())
+private fun Node.singleArgv(): List<String> = argv().single()
 
 class ParserTest {
 
     @Test
     fun parsesASingleCommand() {
-        assertEquals(cmd("echo", "hello"), parseText("echo hello").render())
+        assertEquals(listOf("echo", "hello"), parseText("echo hello").singleArgv())
     }
 
     @Test
-    fun collapsesWhitespaceAndNewlines() {
-        // A multi-line action body: newlines are word separators, not command separators.
-        assertEquals(cmd("echo", "a", "b"), parseText("echo\n   a\n   b").render())
+    fun treatsNewlinesAsWhitespace() {
+        // A multi-line action body: newlines separate words, not commands.
+        assertEquals(listOf("echo", "a", "b"), parseText("echo\n   a\n   b").singleArgv())
     }
 
     @Test
     fun singleQuotesProduceOneWord() {
-        assertEquals(cmd("echo", "hello world"), parseText("echo 'hello world'").render())
-        assertEquals(cmd("git", "commit", "-m", "wip: fix"), parseText("git commit -m 'wip: fix'").render())
+        assertEquals(listOf("echo", "hello world"), parseText("echo 'hello world'").singleArgv())
+        assertEquals(
+            listOf("git", "commit", "-m", "wip: fix"),
+            parseText("git commit -m 'wip: fix'").singleArgv(),
+        )
     }
 
     @Test
     fun quotesConcatenateWithAdjacentText() {
-        assertEquals(cmd("echo", "a b c"), parseText("echo a' 'b' 'c").render())
+        assertEquals(listOf("echo", "a b c"), parseText("echo a' 'b' 'c").singleArgv())
     }
 
     @Test
@@ -45,59 +49,58 @@ class ParserTest {
         assertFailsWith<MicroshellParseException> { parseText("echo 'oops") }
     }
 
+    // --- structure -------------------------------------------------------------------------
+
     @Test
     fun buildsPipelines() {
-        assertEquals(
-            RPipeline(listOf(cmd("a"), cmd("b"), cmd("c"))),
-            parseText("a | b | c").render(),
-        )
+        val node = parseText("a | b | c")
+        assertEquals(Pipeline::class, node::class)
+        assertEquals(listOf(listOf("a"), listOf("b"), listOf("c")), node.argv())
     }
 
     @Test
     fun pipeBindsTighterThanAndOr() {
         // a | b && c  ==  (a | b) && c
-        assertEquals(
-            RAndOr(RPipeline(listOf(cmd("a"), cmd("b"))), Op.And, cmd("c")),
-            parseText("a | b && c").render(),
-        )
+        val node = parseText("a | b && c") as AndOr
+        assertEquals(Pipeline::class, node.left::class)
+        assertEquals(Op.And, node.op)
+        assertEquals(listOf("c"), node.right.singleArgv())
     }
 
     @Test
     fun andOrIsLeftAssociativeAndEqualPrecedence() {
         // a && b || c  ==  (a && b) || c
-        assertEquals(
-            RAndOr(RAndOr(cmd("a"), Op.And, cmd("b")), Op.Or, cmd("c")),
-            parseText("a && b || c").render(),
-        )
+        val node = parseText("a && b || c") as AndOr
+        assertEquals(Op.Or, node.op)
+        val left = node.left as AndOr
+        assertEquals(Op.And, left.op)
     }
 
     @Test
     fun semicolonIsLoosest() {
-        assertEquals(
-            RSeq(listOf(RAndOr(cmd("a"), Op.And, cmd("b")), cmd("c"))),
-            parseText("a && b ; c").render(),
-        )
+        val node = parseText("a && b ; c") as Seq
+        assertEquals(2, node.items.size)
+        assertEquals(AndOr::class, node.items[0]::class)
     }
 
     @Test
     fun allowsTrailingSemicolon() {
-        assertEquals(cmd("a"), parseText("a ;").render())
+        assertEquals(listOf("a"), parseText("a ;").singleArgv())
     }
 
     @Test
     fun groupingOverridesPrecedence() {
-        assertEquals(
-            RAndOr(cmd("a"), Op.Or, RAndOr(cmd("b"), Op.And, cmd("c"))),
-            parseText("a || (b && c)").render(),
-        )
+        // a || (b && c) — the group must be the right operand, not a flattened chain.
+        val node = parseText("a || (b && c)") as AndOr
+        assertEquals(Op.Or, node.op)
+        assertEquals(Group::class, node.right::class)
     }
 
     @Test
     fun groupCanBeAPipelineStage() {
-        assertEquals(
-            RPipeline(listOf(RSeq(listOf(cmd("a"), cmd("b"))), cmd("c"))),
-            parseText("(a ; b) | c").render(),
-        )
+        val node = parseText("(a ; b) | c") as Pipeline
+        assertEquals(Group::class, node.stages[0]::class)
+        assertEquals(listOf(listOf("a"), listOf("b"), listOf("c")), node.argv())
     }
 
     @Test
@@ -113,22 +116,24 @@ class ParserTest {
         assertFailsWith<MicroshellParseException> { parseText("") }
     }
 
+    // --- assignments -----------------------------------------------------------------------
+
     @Test
     fun parsesEnvAssignments() {
-        assertEquals(
-            RCommand(listOf("A" to "1", "B" to "2"), listOf("cmd")),
-            parseText("A=1 B=2 cmd").render(),
-        )
+        val command = parseText("A=1 B=2 cmd") as Command
+        assertEquals(listOf("A", "B"), command.assignments.map { it.name })
+        assertEquals(listOf("1", "2"), command.assignments.map { it.value.toArgv().single() })
+        assertEquals(listOf("cmd"), command.words.flatMap { it.toArgv() })
     }
 
     @Test
     fun assignmentAfterACommandIsJustAnArgument() {
-        assertEquals(cmd("cmd", "A=1"), parseText("cmd A=1").render())
+        assertEquals(listOf("cmd", "A=1"), parseText("cmd A=1").singleArgv())
     }
 
     @Test
     fun quotedAssignmentIsAWordNotAnAssignment() {
-        assertEquals(cmd("A=1", "x"), parseText("'A=1' x").render())
+        assertEquals(listOf("A=1", "x"), parseText("'A=1' x").singleArgv())
     }
 
     @Test
@@ -143,99 +148,95 @@ class ParserTest {
         }
     }
 
-    // --- holes -----------------------------------------------------------------------------
+    // --- values are never lexed --------------------------------------------------------------
 
     @Test
-    fun aHoleIsExactlyOneArgvEntry() {
-        val node = parse(listOf(Literal("echo "), Hole(0)))
-        assertEquals(cmd("echo", "two words"), node.render(mapOf(0 to "two words")))
+    fun aValueIsExactlyOneArgvEntry() {
+        val node = parse(listOf(Literal("echo "), Value("two words")))
+        assertEquals(listOf("echo", "two words"), node.singleArgv())
     }
 
     @Test
-    fun holeValuesAreNeverReLexed() {
-        // The whole point: an injected value stays inert.
-        val node = parse(listOf(Literal("echo "), Hole(0)))
-        assertEquals(cmd("echo", "a; rm -rf /"), node.render(mapOf(0 to "a; rm -rf /")))
-        assertEquals(cmd("echo", "a | b && c"), node.render(mapOf(0 to "a | b && c")))
-        assertEquals(cmd("echo", "'quoted'"), node.render(mapOf(0 to "'quoted'")))
+    fun valuesAreNeverReLexed() {
+        // The whole security model: a resolved value cannot become syntax.
+        listOf(
+            "a; rm -rf /",
+            "a | b && c",
+            "'quoted'",
+            "\$(whoami)",
+            "`whoami`",
+            "> /etc/passwd",
+            "  leading and trailing  ",
+        ).forEach { hostile ->
+            val node = parse(listOf(Literal("echo "), Value(hostile)))
+            assertEquals(listOf("echo", hostile), node.singleArgv(), "`$hostile` leaked into syntax")
+        }
     }
 
     @Test
-    fun holeJoinsAdjacentLiteralsIntoOneWord() {
-        val node = parse(listOf(Literal("cmd --name="), Hole(0), Literal("-suffix")))
-        assertEquals(cmd("cmd", "--name=value-suffix"), node.render(mapOf(0 to "value")))
+    fun aValueJoinsAdjacentLiteralsIntoOneWord() {
+        val node = parse(listOf(Literal("cmd --name="), Value("value"), Literal("-suffix")))
+        assertEquals(listOf("cmd", "--name=value-suffix"), node.singleArgv())
     }
 
     @Test
-    fun aLoneHoleResolvingEmptyDropsTheWord() {
+    fun aLoneEmptyValueDropsItsWord() {
         // An unset flag's mapping must not leave a stray empty argument.
-        val node = parse(listOf(Literal("echo a "), Hole(0), Literal(" b")))
-        assertEquals(cmd("echo", "a", "b"), node.render(mapOf(0 to "")))
+        val node = parse(listOf(Literal("echo a "), Value(""), Literal(" b")))
+        assertEquals(listOf("echo", "a", "b"), node.singleArgv())
     }
 
     @Test
-    fun anEmptyHoleMixedWithTextKeepsTheWord() {
-        val node = parse(listOf(Literal("cmd --name="), Hole(0)))
-        assertEquals(cmd("cmd", "--name="), node.render(mapOf(0 to "")))
+    fun anEmptyValueMixedWithTextKeepsTheWord() {
+        val node = parse(listOf(Literal("cmd --name="), Value("")))
+        assertEquals(listOf("cmd", "--name="), node.singleArgv())
     }
 
     @Test
-    fun holesWorkInAssignmentValues() {
-        val node = parse(listOf(Literal("VAR="), Hole(0), Literal(" cmd")))
-        assertEquals(RCommand(listOf("VAR" to "x y"), listOf("cmd")), node.render(mapOf(0 to "x y")))
+    fun spaceSeparatedValuesBecomeSeparateWords() {
+        // How a multi-valued ref arrives: one value each, split by a literal space.
+        val node = parse(listOf(Literal("cmd "), Value("a b"), Literal(" "), Value("c")))
+        assertEquals(listOf("cmd", "a b", "c"), node.singleArgv())
     }
 
     @Test
-    fun aLoneHoleExpandsToOneArgvEntryPerValue() {
-        // Varargs / passthrough refs must become several arguments, not one joined blob.
-        val node = parse(listOf(Literal("cmd "), Hole(0)))
-        assertEquals(
-            cmd("cmd", "a b", "c"),
-            node.renderMulti(mapOf(0 to listOf("a b", "c"))),
+    fun valuesWorkInAssignments() {
+        val command = parse(listOf(Literal("VAR="), Value("x y"), Literal(" cmd"))) as Command
+        assertEquals("VAR", command.assignments.single().name)
+        assertEquals("x y", command.assignments.single().value.toArgv().single())
+        assertEquals(listOf("cmd"), command.words.flatMap { it.toArgv() })
+    }
+
+    // --- wire format -------------------------------------------------------------------------
+
+    @Test
+    fun wireFormatRoundTrips() {
+        val segments = listOf(
+            Literal("echo "),
+            Value("a; rm -rf /"),
+            Literal(" | wc -l"),
         )
+        assertEquals(segments, decodeSegments(segments.encodeToArgv()))
     }
 
     @Test
-    fun aLoneHoleWithNoValuesDropsTheWord() {
-        val node = parse(listOf(Literal("cmd "), Hole(0), Literal(" tail")))
-        assertEquals(cmd("cmd", "tail"), node.renderMulti(mapOf(0 to emptyList())))
+    fun wireFormatSurvivesValuesThatLookLikeTags() {
+        // argv entries are kernel-delimited, so a value of "t" or "v" cannot confuse the reader.
+        val segments = listOf(Literal("echo "), Value("t"), Literal(" "), Value("v"))
+        assertEquals(segments, decodeSegments(segments.encodeToArgv()))
     }
 
     @Test
-    fun rejectsACommandThatResolvesToNothing() {
-        val node = parse(listOf(Hole(0)))
-        assertFailsWith<MicroshellParseException> { node.render(mapOf(0 to "")) }
-    }
-
-    // --- wire format -----------------------------------------------------------------------
-
-    @Test
-    fun encodeDecodeRoundTrips() {
-        val source = "A=1 cmd 'x y' @ | (b && c) ; d"
-        val node = parse(listOf(Literal("A=1 cmd 'x y' "), Hole(0), Literal(" | (b && c) ; d")))
-        val resolved = node.render(mapOf(0 to "a; rm -rf /"))
-        assertEquals(resolved, decodePlan(resolved.encode()), "round-trip failed for `$source`")
+    fun rejectsMalformedWire() {
+        assertFailsWith<MicroshellParseException> { decodeSegments(listOf("t")) }
+        assertFailsWith<MicroshellParseException> { decodeSegments(listOf("nope", "x")) }
     }
 
     @Test
-    fun encodingSurvivesTokensThatLookLikeTags() {
-        // argv entries are kernel-delimited, so a value of "cmd" or "pipe" cannot confuse the reader.
-        val node = parse(listOf(Literal("echo "), Hole(0), Literal(" "), Hole(1)))
-        val resolved = node.render(mapOf(0 to "pipe", 1 to "cmd"))
-        assertEquals(resolved, decodePlan(resolved.encode()))
-    }
-
-    @Test
-    fun rejectsMalformedPlans() {
-        assertFailsWith<MicroshellParseException> { decodePlan(listOf("nope")) }
-        assertFailsWith<MicroshellParseException> { decodePlan(listOf("cmd", "0")) }
-        assertFailsWith<MicroshellParseException> { decodePlan(listOf("cmd", "0", "1", "a", "extra")) }
-    }
-
-    @Test
-    fun encodesNestedStructureCompactly() {
-        val encoded = parseText("a | b").render().encode()
-        assertTrue(encoded.first() == "pipe", "expected a pipe root, got $encoded")
-        assertEquals(listOf("pipe", "2", "cmd", "0", "1", "a", "cmd", "0", "1", "b"), encoded)
+    fun wireFormatIsFlat() {
+        assertEquals(
+            listOf("t", "echo ", "v", "hi"),
+            listOf(Literal("echo "), Value("hi")).encodeToArgv(),
+        )
     }
 }

@@ -1,9 +1,9 @@
 package com.climat.library.domain.action.template
 
+import com.climat.library.domain.action.ActionSegment
+import com.climat.library.domain.action.LiteralText
+import com.climat.library.domain.action.ResolvedValue
 import com.climat.library.domain.ref.RefWithAnyValue
-import com.climat.microshell.Hole
-import com.climat.microshell.Literal
-import com.climat.microshell.Segment
 
 internal class Template(
     internal val pieces: List<IPiece>,
@@ -28,18 +28,28 @@ internal class Template(
     val refReferences: List<Interpolation> = pieces.filterIsInstance<Interpolation>()
 
     /**
-     * The template as microshell input: literal text **verbatim** (the microshell does its own
-     * whitespace handling, so [SimpleString.str]'s collapsing must not be applied here) and each
-     * interpolation as an opaque hole indexing into [refReferences].
+     * The template with refs resolved, keeping the text/value boundary intact.
+     *
+     * Literal text is emitted **verbatim** — [SimpleString.str]'s whitespace collapsing must not be
+     * applied, because whoever consumes this does its own tokenising. Values are emitted without
+     * [com.climat.library.utils.shellSingleQuote]: they are handed over as discrete segments, so
+     * quoting them would put quote characters *inside* the value.
+     *
+     * A ref carrying several values (a vararg or passthrough) emits one [ResolvedValue] each,
+     * separated by a literal space so they stay distinct rather than merging into one.
      */
-    fun toSegments(): List<Segment> {
-        var hole = 0
-        return pieces.map { piece ->
+    fun resolveToSegments(values: Collection<RefWithAnyValue>): List<ActionSegment> =
+        pieces.flatMap { piece ->
             when (piece) {
-                is SimpleString -> Literal(piece.value)
-                is Interpolation -> Hole(hole++)
+                is SimpleString -> listOf(LiteralText(piece.value))
+                is Interpolation ->
+                    piece.rawValues(values)
+                        .map<String, ActionSegment> { ResolvedValue(it) }
+                        .ifEmpty { listOf(ResolvedValue("")) }
+                        .flatMapIndexed { index, segment ->
+                            if (index == 0) listOf(segment) else listOf(LiteralText(" "), segment)
+                        }
                 else -> throw IllegalStateException("Unsupported template piece `${piece::class}`")
             }
         }
-    }
 }

@@ -77,6 +77,21 @@ class MicroshellTest {
     }
 
     @Test
+    fun malformedBodiesAreReportedAtRunTime() {
+        // Shell syntax belongs to the microshell, not the DSL, so `install` accepts these and the
+        // error surfaces when the macro runs. This suite is the only thing guarding that path.
+        install()
+
+        val unbalanced = runDetailed("microsh-test", "unbalanced")
+        unbalanced.status shouldBe 2
+        unbalanced.stderr shouldContain "Unbalanced"
+
+        val dollar = runDetailed("microsh-test", "dollar-expansion")
+        dollar.status shouldBe 2
+        dollar.stderr shouldContain "not supported"
+    }
+
+    @Test
     fun interpolatedValuesAreExactlyOneArgument() {
         install()
         // Each of these would be re-lexed into syntax by a real shell; here they stay inert.

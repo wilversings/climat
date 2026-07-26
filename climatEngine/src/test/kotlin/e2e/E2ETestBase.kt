@@ -2,8 +2,9 @@ package e2e
 
 import com.climat.library.commandParser.execute
 import com.climat.library.domain.action.ActionValueBase
+import com.climat.library.domain.action.LiteralText
 import com.climat.library.domain.action.MicroshellActionValue
-import com.climat.microshell.ResolvedNode
+import com.climat.library.domain.action.ResolvedValue
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
@@ -29,13 +30,15 @@ abstract class E2ETestBase {
         execAction(args, cliDsl)?.value as? String
 
     /**
-     * Asserts the resolved microshell plan — the argv tree that actually gets executed, rather than
-     * its string rendering, so word boundaries are part of what is being checked.
+     * Asserts the segments an `act microsh` body resolves to, tagged `t:` for literal DSL text and
+     * `v:` for a resolved ref value.
+     *
+     * The engine does not parse shell syntax, so the boundary between text and value *is* the
+     * contract: it is what stops a value from ever being read as syntax downstream.
      */
-    protected fun String.assertPlans(vararg commandToPlan: Pair<String, ResolvedNode>): String {
-        commandToPlan.forEach { (command, expectedPlan) ->
-            val plan = (execAction(command, this) as? MicroshellActionValue)?.plan
-            assertEquals(expectedPlan, plan, "Unexpected plan for command `$command`")
+    protected fun String.assertSegments(vararg commandToSegments: Pair<String, List<String>>): String {
+        commandToSegments.forEach { (command, expected) ->
+            assertEquals(expected, tagged(execAction(command, this)), "Unexpected segments for `$command`")
         }
         return this
     }
@@ -44,13 +47,21 @@ abstract class E2ETestBase {
      * Same, but takes argv directly. Necessary for values containing spaces, which the
      * `split(" ")` form above cannot express — and those are exactly the interesting cases.
      */
-    protected fun String.assertPlansForArgv(vararg argvToPlan: Pair<List<String>, ResolvedNode>): String {
-        argvToPlan.forEach { (argv, expectedPlan) ->
-            val plan = (execAction(argv.toTypedArray(), this) as? MicroshellActionValue)?.plan
-            assertEquals(expectedPlan, plan, "Unexpected plan for argv $argv")
+    protected fun String.assertSegmentsForArgv(vararg argvToSegments: Pair<List<String>, List<String>>): String {
+        argvToSegments.forEach { (argv, expected) ->
+            val action = execAction(argv.toTypedArray(), this)
+            assertEquals(expected, tagged(action), "Unexpected segments for argv $argv")
         }
         return this
     }
+
+    private fun tagged(action: ActionValueBase<*>?): List<String>? =
+        (action as? MicroshellActionValue)?.segments?.map {
+            when (it) {
+                is LiteralText -> "t:${it.text}"
+                is ResolvedValue -> "v:${it.value}"
+            }
+        }
 
     protected fun String.assertResults(vararg commandToResult: Pair<String, String?>): String {
         commandToResult.forEach { (command, expectedResult) ->

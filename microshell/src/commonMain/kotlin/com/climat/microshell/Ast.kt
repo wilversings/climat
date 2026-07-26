@@ -1,39 +1,66 @@
 package com.climat.microshell
 
 /**
- * A piece of an action body as handed to the microshell. Literal text comes from the DSL and is
- * lexed for shell metacharacters; a [Hole] is an opaque `@{ref}` that the caller resolves later.
+ * A piece of an action body as handed to the microshell.
  *
- * Because a hole is atomic, a resolved ref value is never re-lexed — it always lands as exactly one
- * argv entry, whatever it contains.
+ * [Literal] is text written in the DSL and is lexed for shell metacharacters. [Value] is an
+ * already-resolved `@{ref}` value and is **never** lexed — it is atomic, so whatever it contains
+ * (`;`, `|`, quotes) lands as ordinary characters in exactly one argv entry rather than as syntax.
+ *
+ * That split is the whole security model, and it is why the caller resolves refs before handing the
+ * body over: by the time the microshell sees a value, there is no way for it to become a command.
  */
 sealed interface Segment
 
 data class Literal(val text: String) : Segment
 
-data class Hole(val id: Int) : Segment
+data class Value(val text: String) : Segment
 
-/** A single argv entry, assembled from literal text and holes (`--name=@{x}` is one word). */
-data class Word(val parts: List<Segment>)
+/** A single argv entry, assembled from literal text and values (`--name=@{x}` is one word). */
+internal data class Word(val parts: List<Segment>) {
 
-data class Assignment(val name: String, val value: Word)
+    /**
+     * The argv entry this word contributes: one, or none at all.
+     *
+     * A word that is nothing but an empty value disappears, so an unset flag's mapping drops the
+     * whole argument rather than leaving a stray empty entry. A value mixed with literal text
+     * (`--name=@{x}`) always yields a word, even when the value is empty.
+     *
+     * A ref with several values arrives as separate values already split by literal whitespace, so
+     * the tokenizer has made them separate words by the time this runs — nothing to expand here.
+     */
+    fun toArgv(): List<String> {
+        val single = parts.singleOrNull()
+        if (single is Value) return if (single.text.isEmpty()) emptyList() else listOf(single.text)
+        return listOf(
+            parts.joinToString("") { part ->
+                when (part) {
+                    is Literal -> part.text
+                    is Value -> part.text
+                }
+            },
+        )
+    }
+}
 
-enum class Op { And, Or }
+internal data class Assignment(val name: String, val value: Word)
+
+internal enum class Op { And, Or }
 
 /**
  * Parsed microshell body. Precedence, loosest to tightest: `;`, then `&&`/`||` (equal and
  * left-associative, as in POSIX), then `|`.
  */
-sealed interface Node
+internal sealed interface Node
 
-data class Seq(val items: List<Node>) : Node
+internal data class Seq(val items: List<Node>) : Node
 
-data class AndOr(val left: Node, val op: Op, val right: Node) : Node
+internal data class AndOr(val left: Node, val op: Op, val right: Node) : Node
 
-data class Pipeline(val stages: List<Node>) : Node
+internal data class Pipeline(val stages: List<Node>) : Node
 
-data class Group(val body: Node) : Node
+internal data class Group(val body: Node) : Node
 
-data class Command(val assignments: List<Assignment>, val words: List<Word>) : Node
+internal data class Command(val assignments: List<Assignment>, val words: List<Word>) : Node
 
-class MicroshellParseException(message: String) : Exception(message)
+internal class MicroshellParseException(message: String) : Exception(message)

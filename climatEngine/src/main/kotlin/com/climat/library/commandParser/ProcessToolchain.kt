@@ -3,12 +3,12 @@ package com.climat.library.commandParser
 import com.climat.library.commandParser.exception.ParameterException
 import com.climat.library.domain.action.ActionValueBase
 import com.climat.library.domain.action.JavaScriptActionValue
+import com.climat.library.domain.action.LiteralText
 import com.climat.library.domain.action.MicroshellActionValue
 import com.climat.library.domain.action.NoopActionValue
+import com.climat.library.domain.action.ResolvedValue
 import com.climat.library.domain.action.ScopeParamsActionValue
 import com.climat.library.domain.action.TemplateActionValue
-import com.climat.microshell.render
-import com.climat.microshell.resolve
 import com.climat.library.domain.isLeaf
 import com.climat.library.domain.ref.RefWithAnyValue
 import com.climat.library.domain.toolchain.Toolchain
@@ -121,11 +121,15 @@ private fun setActualCommand(
     when (action) {
         is TemplateActionValue -> action.value = action.template.str(values)
         is MicroshellActionValue -> {
-            val refs = action.template.refReferences
-            // Ref values become argv entries directly — never re-lexed, so no shell quoting.
-            val plan = action.ast.resolve { hole -> refs[hole.id].rawValues(values) }
-            action.plan = plan
-            action.value = plan.render()
+            // Refs are resolved here; the shell language is parsed later, by the microshell itself.
+            val segments = action.template.resolveToSegments(values)
+            action.segments = segments
+            action.value = segments.joinToString("") {
+                when (it) {
+                    is LiteralText -> it.text
+                    is ResolvedValue -> it.value
+                }
+            }
         }
         is JavaScriptActionValue -> action.value = values.associate { it.ref.name to it.value }
         is ScopeParamsActionValue -> action.value = values.associate { it.ref.name to it.value }

@@ -9,8 +9,6 @@ import com.climat.library.domain.action.TemplateActionValue
 import com.climat.library.dslParser.exception.assertRequire
 import com.climat.library.dslParser.exception.throwExpected
 import com.climat.library.dslParser.template.decodeTemplate
-import com.climat.microshell.MicroshellParseException
-import com.climat.microshell.parse
 import com.climat.library.utils.emptyString
 import com.climat.library.utils.noopAction
 import com.climat.library.utils.unescape
@@ -33,19 +31,12 @@ internal fun decodeRootAction(cliDsl: String, statements: List<DslParser.RootSta
             decodeTemplate(cliDsl, shellAction.actionTemplateEntry()),
             shellAction.position
         )
-        // Parsed here, not at run time, so a malformed body is reported with source context
-        // alongside every other DSL error.
-        microshellAction != null -> decodeTemplate(cliDsl, microshellAction.actionTemplateEntry()).let { template ->
-            MicroshellActionValue(
-                template,
-                try {
-                    parse(template.toSegments())
-                } catch (ex: MicroshellParseException) {
-                    microshellAction.throwExpected(ex.message ?: "Invalid microshell action", cliDsl)
-                },
-                microshellAction.position
-            )
-        }
+        // Only the template is decoded here. The shell language inside the body belongs to the
+        // microshell and is parsed there, at run time — the DSL has no opinion about it.
+        microshellAction != null -> MicroshellActionValue(
+            decodeTemplate(cliDsl, microshellAction.actionTemplateEntry()),
+            microshellAction.position
+        )
         // Braces that don't close the body split the script across several tokens
         javascriptAction != null -> JavaScriptActionValue(
             javascriptAction.CustomScript_SCRIPT()

@@ -2,6 +2,9 @@ package com.climat.microshell
 
 import com.climat.Path
 import com.climat.jsObjectOf
+import com.climat.library.domain.action.ActionSegment
+import com.climat.library.domain.action.LiteralText
+import com.climat.library.domain.action.ResolvedValue
 import process
 import kotlin.js.Promise
 
@@ -26,13 +29,26 @@ private val nodeArch: String
     get() = process.asDynamic().arch as String
 
 /**
- * Runs a resolved plan in the bundled `climat-msh` binary.
+ * Runs a resolved action body in the bundled `climat-msh` binary, which parses the shell language
+ * itself.
  *
- * The plan travels as plain `argv` entries — already delimited by the kernel, so there is no
- * encoding step that could reintroduce quoting bugs. stdio is inherited, so the shell owns the
- * terminal exactly as `/bin/sh` would.
+ * This is the only place that knows both vocabularies: it maps the engine's [ActionSegment]s onto
+ * the microshell's [Segment]s. The body travels as plain `argv` entries — already delimited by the
+ * kernel, so there is no encoding step that could reintroduce quoting bugs. stdio is inherited, so
+ * the shell owns the terminal exactly as `/bin/sh` would.
  */
-fun spawnMicroshell(plan: ResolvedNode): Promise<Int> {
+fun spawnMicroshell(body: List<ActionSegment>): Promise<Int> {
+    val segments =
+        body.map { segment ->
+            when (segment) {
+                is LiteralText -> Literal(segment.text)
+                is ResolvedValue -> Value(segment.value)
+            }
+        }
+    return spawnWith(segments.encodeToArgv())
+}
+
+private fun spawnWith(argv: List<String>): Promise<Int> {
     val binary =
         microshellBinary()
             ?: throw Exception(
@@ -44,7 +60,7 @@ fun spawnMicroshell(plan: ResolvedNode): Promise<Int> {
         val child =
             NodeChildProcess.spawn(
                 binary,
-                plan.encode().toTypedArray(),
+                argv.toTypedArray(),
                 jsObjectOf("stdio" to "inherit"),
             )
 

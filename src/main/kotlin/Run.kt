@@ -39,7 +39,7 @@ suspend fun doExec(
                 is TemplateActionValue -> {
                     child_process.execSync(command.value!!, jsObjectOf("stdio" to "inherit") as ExecSyncOptions)
                 }
-                is MicroshellActionValue -> pending = spawnMicroshell(command.plan!!)
+                is MicroshellActionValue -> pending = spawnMicroshell(command.segments!!)
                 is JavaScriptActionValue -> handleCustomScript(command, toolchain)
                 else -> throw Exception("${command.type} not supported")
             }

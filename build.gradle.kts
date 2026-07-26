@@ -67,6 +67,10 @@ kotlin {
 
                 implementation(project("climatEngine"))
 
+                // The root module is the only one that knows both vocabularies: it maps the
+                // engine's resolved action segments onto the microshell's.
+                implementation(project(":microshell"))
+
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
 
                 // https://github.com/Kotlin/kotlinx-nodejs/issues/16

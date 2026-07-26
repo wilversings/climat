@@ -6,7 +6,27 @@ private data class WordTok(val word: Word, val startedQuoted: Boolean) : Token
 
 private enum class Punct : Token { Pipe, AndAnd, OrOr, Semi, LParen, RParen }
 
-private val assignmentName = Regex("^([A-Za-z_][A-Za-z0-9_]*)=")
+/**
+ * Length of a leading `NAME=` prefix (i.e. the index of the `=`), or `-1` if there isn't one.
+ *
+ * Hand-rolled rather than a `Regex` on purpose: this is the only pattern in the module, and linking
+ * Kotlin's regex engine into the shipped native binary costs far more than the scan it replaces.
+ */
+private fun assignmentNameLength(text: String): Int {
+    if (text.isEmpty()) return -1
+    val first = text[0]
+    if (!(first in 'a'..'z' || first in 'A'..'Z' || first == '_')) return -1
+    var i = 1
+    while (i < text.length) {
+        when (val c = text[i]) {
+            '=' -> return i
+            else ->
+                if (!(c in 'a'..'z' || c in 'A'..'Z' || c in '0'..'9' || c == '_')) return -1
+        }
+        i++
+    }
+    return -1
+}
 
 /**
  * Parses a microshell body.
@@ -16,7 +36,7 @@ private val assignmentName = Regex("^([A-Za-z_][A-Za-z0-9_]*)=")
  * globbing — climat's own `@{ref}` interpolation is the way to get a value (including one with
  * spaces) into a single argv entry.
  */
-fun parse(segments: List<Segment>): Node = Parser(tokenize(segments)).parseSeq(topLevel = true)
+internal fun parse(segments: List<Segment>): Node = Parser(tokenize(segments)).parseSeq(topLevel = true)
 
 private fun tokenize(segments: List<Segment>): List<Token> {
     val tokens = mutableListOf<Token>()
@@ -50,8 +70,8 @@ private fun tokenize(segments: List<Segment>): List<Token> {
 
     for (segment in segments) {
         when (segment) {
-            // Atomic: never lexed, so its value cannot introduce syntax.
-            is Hole -> {
+            // Atomic: never lexed, so a resolved value cannot introduce syntax.
+            is Value -> {
                 flushText()
                 beginWord(false)
                 parts.add(segment)
@@ -173,9 +193,10 @@ private class Parser(private val tokens: List<Token>) {
     private fun splitAssignment(tok: WordTok): Assignment? {
         if (tok.startedQuoted) return null
         val first = tok.word.parts.firstOrNull() as? Literal ?: return null
-        val match = assignmentName.find(first.text) ?: return null
-        val name = match.groupValues[1]
-        val rest = first.text.substring(match.value.length)
+        val nameLength = assignmentNameLength(first.text)
+        if (nameLength < 0) return null
+        val name = first.text.substring(0, nameLength)
+        val rest = first.text.substring(nameLength + 1)
         val tail = tok.word.parts.drop(1)
         val parts = if (rest.isEmpty()) tail else listOf(Literal(rest)) + tail
         return Assignment(name, Word(parts))

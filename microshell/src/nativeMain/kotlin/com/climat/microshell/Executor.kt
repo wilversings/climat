@@ -31,10 +31,10 @@ import platform.posix.stderr
 import platform.posix.strerror
 import platform.posix.waitpid
 
-internal fun execute(node: ResolvedNode): Int = when (node) {
-    is RSeq -> node.items.fold(0) { _, item -> execute(item) }
+internal fun execute(node: Node): Int = when (node) {
+    is Seq -> node.items.fold(0) { _, item -> execute(item) }
 
-    is RAndOr -> {
+    is AndOr -> {
         val left = execute(node.left)
         when (node.op) {
             Op.And -> if (left == 0) execute(node.right) else left
@@ -42,11 +42,13 @@ internal fun execute(node: ResolvedNode): Int = when (node) {
         }
     }
 
-    is RPipeline -> runPipeline(node.stages)
-    is RCommand -> runCommand(node)
+    // Parentheses only shape parse-time precedence; there is no scope to preserve in v1.
+    is Group -> execute(node.body)
+    is Pipeline -> runPipeline(node.stages)
+    is Command -> runCommand(node)
 }
 
-private fun runCommand(command: RCommand): Int {
+private fun runCommand(command: Command): Int {
     val pid = fork()
     if (pid < 0) {
         perror("climat-msh: fork")
@@ -66,7 +68,7 @@ private fun runCommand(command: RCommand): Int {
  * closes the ends it did not dup. That is what makes an early-exiting consumer deliver SIGPIPE to
  * its producer — leave any copy open and `yes | head -3` never terminates.
  */
-private fun runPipeline(stages: List<ResolvedNode>): Int {
+private fun runPipeline(stages: List<Node>): Int {
     if (stages.size == 1) return execute(stages.single())
 
     val pids = IntArray(stages.size)
@@ -108,7 +110,7 @@ private fun runPipeline(stages: List<ResolvedNode>): Int {
                 close(readEnd)
             }
             when (val stage = stages[index]) {
-                is RCommand -> execCommand(stage)
+                is Command -> execCommand(stage)
                 else -> _exit(execute(stage))
             }
             _exit(127) // unreachable
@@ -129,18 +131,28 @@ private fun runPipeline(stages: List<ResolvedNode>): Int {
 }
 
 /** Replaces the calling (child) process. Only ever returns by terminating it. */
-private fun execCommand(command: RCommand) {
+private fun execCommand(command: Command) {
+    // Words collapse to argv here rather than before the fork: an interpolated value that resolved
+    // to nothing drops its word, so the final argument list is only known at this point.
+    val words = command.words.flatMap { it.toArgv() }
+    if (words.isEmpty()) {
+        fputs("climat-msh: command resolved to nothing — an interpolated value was empty\n", stderr)
+        _exit(2)
+    }
+
     memScoped {
-        command.assignments.forEach { (name, value) -> setenv(name, value, 1) }
-        val argv = allocArray<CPointerVar<ByteVar>>(command.argv.size + 1)
-        command.argv.forEachIndexed { i, arg -> argv[i] = arg.cstr.getPointer(this) }
-        argv[command.argv.size] = null
-        execvp(command.argv[0], argv)
+        command.assignments.forEach { assignment ->
+            setenv(assignment.name, assignment.value.toArgv().joinToString(" "), 1)
+        }
+        val argv = allocArray<CPointerVar<ByteVar>>(words.size + 1)
+        words.forEachIndexed { i, arg -> argv[i] = arg.cstr.getPointer(this) }
+        argv[words.size] = null
+        execvp(words[0], argv)
     }
 
     val code = errno
     val reason = strerror(code)?.toKString() ?: "exec failed"
-    fputs("climat-msh: ${command.argv[0]}: $reason\n", stderr)
+    fputs("climat-msh: ${words[0]}: $reason\n", stderr)
     _exit(if (code == ENOENT) 127 else 126)
 }
 
