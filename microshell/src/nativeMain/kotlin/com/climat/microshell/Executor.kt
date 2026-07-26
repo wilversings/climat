@@ -12,24 +12,7 @@ import kotlinx.cinterop.get
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.set
-import kotlinx.cinterop.toKString
 import kotlinx.cinterop.value
-import platform.posix.ENOENT
-import platform.posix.STDIN_FILENO
-import platform.posix.STDOUT_FILENO
-import platform.posix._exit
-import platform.posix.close
-import platform.posix.dup2
-import platform.posix.errno
-import platform.posix.execvp
-import platform.posix.fork
-import platform.posix.fputs
-import platform.posix.perror
-import platform.posix.pipe
-import platform.posix.setenv
-import platform.posix.stderr
-import platform.posix.strerror
-import platform.posix.waitpid
 
 internal fun execute(node: Node): Int = when (node) {
     is Seq -> node.items.fold(0) { _, item -> execute(item) }
@@ -49,14 +32,14 @@ internal fun execute(node: Node): Int = when (node) {
 }
 
 private fun runCommand(command: Command): Int {
-    val pid = fork()
+    val pid = Posix.fork()
     if (pid < 0) {
-        perror("climat-msh: fork")
+        Posix.perror("climat-msh: fork")
         return 1
     }
     if (pid == 0) {
         execCommand(command)
-        _exit(127) // unreachable: execCommand always terminates the child
+        Posix.exit(127) // unreachable: execCommand always terminates the child
     }
     return awaitStatus(pid)
 }
@@ -82,8 +65,8 @@ private fun runPipeline(stages: List<Node>): Int {
         if (!isLast) {
             memScoped {
                 val fds = allocArray<IntVar>(2)
-                if (pipe(fds) != 0) {
-                    perror("climat-msh: pipe")
+                if (Posix.pipe(fds) != 0) {
+                    Posix.perror("climat-msh: pipe")
                     return 1
                 }
                 readEnd = fds[0]
@@ -91,35 +74,35 @@ private fun runPipeline(stages: List<Node>): Int {
             }
         }
 
-        val pid = fork()
+        val pid = Posix.fork()
         if (pid < 0) {
-            perror("climat-msh: fork")
+            Posix.perror("climat-msh: fork")
             return 1
         }
 
         if (pid == 0) {
             if (prevRead >= 0) {
-                dup2(prevRead, STDIN_FILENO)
-                close(prevRead)
+                Posix.dup2(prevRead, Posix.STDIN_FILENO)
+                Posix.close(prevRead)
             }
             if (!isLast) {
-                dup2(writeEnd, STDOUT_FILENO)
-                close(writeEnd)
+                Posix.dup2(writeEnd, Posix.STDOUT_FILENO)
+                Posix.close(writeEnd)
                 // Critical: an extra reader held here would keep the *next* pipe alive and stop
                 // the downstream consumer's exit from ever signalling this producer.
-                close(readEnd)
+                Posix.close(readEnd)
             }
             when (val stage = stages[index]) {
                 is Command -> execCommand(stage)
-                else -> _exit(execute(stage))
+                else -> Posix.exit(execute(stage))
             }
-            _exit(127) // unreachable
+            Posix.exit(127) // unreachable
         }
 
         pids[index] = pid
-        if (prevRead >= 0) close(prevRead)
+        if (prevRead >= 0) Posix.close(prevRead)
         if (!isLast) {
-            close(writeEnd)
+            Posix.close(writeEnd)
             prevRead = readEnd
         }
     }
@@ -136,29 +119,29 @@ private fun execCommand(command: Command) {
     // to nothing drops its word, so the final argument list is only known at this point.
     val words = command.words.flatMap { it.toArgv() }
     if (words.isEmpty()) {
-        fputs("climat-msh: command resolved to nothing — an interpolated value was empty\n", stderr)
-        _exit(2)
+        Posix.writeStderr("climat-msh: command resolved to nothing — an interpolated value was empty\n")
+        Posix.exit(2)
     }
 
     memScoped {
         command.assignments.forEach { assignment ->
-            setenv(assignment.name, assignment.value.toArgv().joinToString(" "), 1)
+            Posix.setenv(assignment.name, assignment.value.toArgv().joinToString(" "), 1)
         }
         val argv = allocArray<CPointerVar<ByteVar>>(words.size + 1)
         words.forEachIndexed { i, arg -> argv[i] = arg.cstr.getPointer(this) }
         argv[words.size] = null
-        execvp(words[0], argv)
+        Posix.execvp(words[0], argv)
     }
 
-    val code = errno
-    val reason = strerror(code)?.toKString() ?: "exec failed"
-    fputs("climat-msh: ${words[0]}: $reason\n", stderr)
-    _exit(if (code == ENOENT) 127 else 126)
+    val code = Posix.errno()
+    val reason = Posix.strerror(code) ?: "exec failed"
+    Posix.writeStderr("climat-msh: ${words[0]}: $reason\n")
+    Posix.exit(if (code == Posix.ENOENT) 127 else 126)
 }
 
 private fun awaitStatus(pid: Int): Int = memScoped {
     val slot = alloc<IntVar>()
-    if (waitpid(pid, slot.ptr, 0) < 0) return@memScoped 1
+    if (Posix.waitpid(pid, slot.ptr, 0) < 0) return@memScoped 1
     val status = slot.value
     val signal = status and 0x7f
     // Mirror the shell convention: 128 + N for a signalled child.

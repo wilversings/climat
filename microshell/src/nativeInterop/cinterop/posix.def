@@ -1,0 +1,79 @@
+# On this toolchain, cinterop-generated klibs don't bind declarations pulled in purely via a
+# `headers` list against system/glibc headers (verified against a from-scratch rebuild of
+# Kotlin/Native's own bundled platform.posix.def, with its default fallback library disabled) — only
+# a custom, non-system header resolves. So instead of listing headers and letting cinterop bind
+# glibc's declarations directly (which is also how `platform.posix` pulls in its hardcoded
+# `-lresolv -lm -lpthread -lutil -lcrypt -lrt`, regardless of what's actually used), every function
+# below is our own thin wrapper, written directly in C. This keeps linkerOpts empty, so the binary
+# only needs libc.
+package = climat.msh.posix
+
+---
+
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <string.h>
+
+static int msh_fork(void) {
+    return fork();
+}
+
+static int msh_pipe(int fds[2]) {
+    return pipe(fds);
+}
+
+static int msh_dup2(int oldFd, int newFd) {
+    return dup2(oldFd, newFd);
+}
+
+static int msh_close(int fd) {
+    return close(fd);
+}
+
+static int msh_execvp(const char *file, char *const argv[]) {
+    return execvp(file, argv);
+}
+
+static int msh_waitpid(int pid, int *status, int options) {
+    return waitpid(pid, status, options);
+}
+
+static int msh_setenv(const char *name, const char *value, int overwrite) {
+    return setenv(name, value, overwrite);
+}
+
+static void msh_exit(int status) __attribute__((noreturn));
+static void msh_exit(int status) {
+    _exit(status);
+}
+
+static int msh_errno(void) {
+    return errno;
+}
+
+static const char *msh_strerror(int code) {
+    return strerror(code);
+}
+
+static void msh_perror(const char *message) {
+    perror(message);
+}
+
+static void msh_write_stderr(const char *message) {
+    fputs(message, stderr);
+}
+
+static int msh_enoent(void) {
+    return ENOENT;
+}
+
+static int msh_stdin_fileno(void) {
+    return STDIN_FILENO;
+}
+
+static int msh_stdout_fileno(void) {
+    return STDOUT_FILENO;
+}

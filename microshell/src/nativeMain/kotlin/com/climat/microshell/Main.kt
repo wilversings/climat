@@ -2,8 +2,6 @@
 
 package com.climat.microshell
 
-import platform.posix.fputs
-import platform.posix.stderr
 import kotlin.system.exitProcess
 
 /**
@@ -18,14 +16,14 @@ import kotlin.system.exitProcess
  */
 fun main(args: Array<String>) {
     if (args.isEmpty()) {
-        fputs("climat-msh: no action body given\n", stderr)
+        Posix.writeStderr("climat-msh: no action body given\n")
         exitProcess(2)
     }
 
     val command = try {
         parse(decodeSegments(args.toList()))
     } catch (ex: MicroshellParseException) {
-        fputs("climat-msh: ${ex.message}\n", stderr)
+        Posix.writeStderr("climat-msh: ${ex.message}\n")
         exitProcess(2)
     }
 
