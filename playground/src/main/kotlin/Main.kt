@@ -15,6 +15,7 @@ import kotlinx.browser.window
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.events.KeyboardEvent
+import org.w3c.dom.url.URLSearchParams
 
 /**
  * A CodeMirror 6 editor + a fake shell around the Climat engine.
@@ -43,6 +44,7 @@ sgit {
 """.trimIndent()
 
 private const val STORAGE_KEY = "climat-playground-source"
+private const val THEME_STORAGE_KEY = "climat-playground-theme"
 
 // --- CodeMirror + custom-script runner, wired through require() so webpack bundles them ---
 
@@ -187,9 +189,43 @@ private val climatHighlighting: dynamic = js(
     """
 )
 
+/**
+ * Overrides CodeMirror's built-in light/dark base theme (which hardcodes a light gutter
+ * background regardless of the surrounding page) so gutters, selection and cursor follow our
+ * CSS custom properties — and therefore repaint automatically when [data-theme] flips, with no
+ * need to recreate the editor.
+ *
+ * `EditorView.theme()` (unlike `EditorView.baseTheme()`) doesn't support `&light`/`&dark`
+ * selectors, and its rules land at the same specificity as CodeMirror's own base theme — so the
+ * contested properties are marked `!important` to win regardless of base theme's light/dark
+ * variant or rule order.
+ */
+private val climatEditorTheme: dynamic = js(
+    """
+    (function () {
+        var view = require('@codemirror/view');
+        return view.EditorView.theme({
+            '&': { color: 'var(--fg)', backgroundColor: 'transparent' },
+            '.cm-content': { caretColor: 'var(--accent)' },
+            '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--accent)' },
+            '.cm-selectionBackground': { backgroundColor: 'var(--border) !important' },
+            '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground': { backgroundColor: 'var(--border) !important' },
+            '.cm-gutters': {
+                backgroundColor: 'var(--panel-2) !important',
+                color: 'var(--muted) !important',
+                border: 'none !important',
+                borderRight: '1px solid var(--border) !important'
+            },
+            '.cm-activeLineGutter': { backgroundColor: 'var(--border) !important', color: 'var(--fg) !important' },
+            '.cm-activeLine': { backgroundColor: 'transparent !important' }
+        });
+    })()
+    """
+)
+
 private val makeEditor: dynamic = js(
     """
-    (function (parent, doc, onChange, langExt, highlightExt) {
+    (function (parent, doc, onChange, langExt, highlightExt, themeExt) {
         var view = require('@codemirror/view');
         var cm = require('codemirror');
         var EditorView = view.EditorView;
@@ -198,7 +234,7 @@ private val makeEditor: dynamic = js(
         });
         return new EditorView({
             doc: doc,
-            extensions: [cm.basicSetup, langExt, highlightExt, listener, EditorView.lineWrapping],
+            extensions: [cm.basicSetup, langExt, highlightExt, listener, themeExt, EditorView.lineWrapping],
             parent: parent
         });
     })
@@ -240,8 +276,17 @@ private val history = mutableListOf<String>()
 private var historyIdx = 0
 
 fun main() {
+    applyColorOverridesFromQuery()
+    val themeForcedByHost = initTheme()
+    if (themeForcedByHost) {
+        (document.getElementById("theme-toggle") as? HTMLElement)?.style?.display = "none"
+    } else {
+        setupThemeToggle()
+    }
+
     val initialSource = localStorage.getItem(STORAGE_KEY) ?: DEFAULT_DSL
     setupEditor(initialSource)
+    setupResetButton()
     setupShell()
     analyze(initialSource)
     printLine("Welcome to the climat playground.", "note")
@@ -249,13 +294,83 @@ fun main() {
     printLine("Try:  acp --amend   |   cf myFeature --force", "note")
 }
 
+// --- Theme & embedding ---
+
+/**
+ * Lets the embedding page (this playground is meant to be rendered inside an iframe) brand the
+ * UI via `?primaryLight=&secondaryLight=&primaryDark=&secondaryDark=` query params — any CSS
+ * color syntax works. Primary drives the accent color (logo, prompt, cursor); secondary drives
+ * the DSL keyword color in the editor. See also [initTheme] for the `?theme=` param.
+ */
+private fun applyColorOverridesFromQuery() {
+    val params = URLSearchParams(window.location.search)
+    val root = document.documentElement as HTMLElement
+    params.get("primaryLight")?.let { root.style.setProperty("--accent-light", it) }
+    params.get("secondaryLight")?.let { root.style.setProperty("--cmd-light", it) }
+    params.get("primaryDark")?.let { root.style.setProperty("--accent-dark", it) }
+    params.get("secondaryDark")?.let { root.style.setProperty("--cmd-dark", it) }
+}
+
+/**
+ * Theme precedence: an explicit `?theme=light|dark` from the embedding page wins outright (and
+ * isn't persisted, so the host stays in control on every load); otherwise fall back to the
+ * user's last in-app toggle choice, then the OS preference.
+ *
+ * A synchronous inline script in index.html's `<head>` already resolves and applies this same
+ * precedence before first paint (to avoid a flash of the wrong theme while this bundle loads) —
+ * keep the two in sync. Re-applying it here is still needed to update the toggle button, which
+ * only exists once this script runs.
+ *
+ * @return true if the theme came from the query param, in which case the host is dictating the
+ *   theme and the in-app toggle is hidden rather than offering a control that wouldn't stick.
+ */
+private fun initTheme(): Boolean {
+    val fromQuery = URLSearchParams(window.location.search).get("theme")?.takeIf { it == "light" || it == "dark" }
+    val stored = localStorage.getItem(THEME_STORAGE_KEY)
+    val theme = fromQuery ?: stored ?: if (window.matchMedia("(prefers-color-scheme: light)").matches) "light" else "dark"
+    applyTheme(theme)
+    return fromQuery != null
+}
+
+private fun applyTheme(theme: String) {
+    val root = document.documentElement as HTMLElement
+    root.setAttribute("data-theme", theme)
+    val btn = document.getElementById("theme-toggle") as? HTMLElement ?: return
+    btn.textContent = if (theme == "light") "🌙" else "☀️"
+    btn.setAttribute("aria-label", if (theme == "light") "Switch to dark theme" else "Switch to light theme")
+}
+
+private fun setupThemeToggle() {
+    val btn = document.getElementById("theme-toggle") as HTMLElement
+    btn.addEventListener("click", {
+        val current = document.documentElement?.getAttribute("data-theme") ?: "dark"
+        val next = if (current == "light") "dark" else "light"
+        localStorage.setItem(THEME_STORAGE_KEY, next)
+        applyTheme(next)
+    })
+}
+
 // --- Editor & diagnostics ---
 
 private fun setupEditor(initialSource: String) {
     val parent = document.getElementById("editor")
-    editorView = makeEditor(parent, initialSource, { src: String -> onDocChanged(src) }, climatLanguage, climatHighlighting)
+    editorView = makeEditor(
+        parent,
+        initialSource,
+        { src: String -> onDocChanged(src) },
+        climatLanguage,
+        climatHighlighting,
+        climatEditorTheme,
+    )
     // Small embedding hook: replace the editor content programmatically (also used by tests).
     window.asDynamic().__climatSetSource = { text: String -> setDoc(editorView, text) }
+}
+
+private fun setupResetButton() {
+    val btn = document.getElementById("reset-source") as HTMLElement
+    btn.addEventListener("click", {
+        setDoc(editorView, DEFAULT_DSL)
+    })
 }
 
 private fun currentSource(): String =

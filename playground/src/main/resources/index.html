@@ -5,6 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#161c2b" />
     <title>Climat Playground</title>
+    <!--
+      Sets [data-theme] before first paint so the page never flashes the CSS default (dark)
+      before the Kotlin/JS bundle loads and runs its own (slower, identical) resolution in
+      Main.kt's initTheme(). Keep this precedence in sync with that function.
+    -->
+    <script>
+        (function () {
+            try {
+                var theme = new URLSearchParams(window.location.search).get("theme");
+                if (theme !== "light" && theme !== "dark") {
+                    theme = localStorage.getItem("climat-playground-theme");
+                }
+                if (theme !== "light" && theme !== "dark") {
+                    theme = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+                }
+                document.documentElement.setAttribute("data-theme", theme);
+            } catch (e) {}
+        })();
+    </script>
     <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -12,11 +31,15 @@
     <header id="topbar">
         <span class="logo">climat</span>
         <span class="tagline">playground &mdash; edit a definition, then try the toolchain in the shell</span>
+        <button id="theme-toggle" type="button" aria-label="Toggle theme"></button>
     </header>
 
     <main id="panes">
         <section id="editor-pane" class="pane">
-            <div class="pane-header">Definition <span class="hint">(.cli)</span></div>
+            <div class="pane-header">
+                Definition <span class="hint">(.cli)</span>
+                <button id="reset-source" type="button">Reset</button>
+            </div>
             <div id="editor"></div>
             <div class="pane-header">Diagnostics</div>
             <div id="diagnostics"><div class="diag-empty">No problems.</div></div>
