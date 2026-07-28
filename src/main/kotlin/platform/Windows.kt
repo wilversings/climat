@@ -22,17 +22,16 @@ class Windows : Platform() {
     ) {
         moveManifestToClimatHome(toolchainHome, pathToManifest, name)
 
-        val batchFilePath = getBatchFilePath(name)
         Fs.ensureDir(climatScriptBin).await()
 
-        Fs.writeFile(batchFilePath, getBatchScript(name)).await()
-
-        val aliasScript = getAliasScript(name)
-
-        Promise
-            .all(
-                aliases.map { Fs.writeFile(getBatchFilePath(it), aliasScript) }.toTypedArray(),
-            ).await()
+        // Windows can't execute a bare .js file by name (its extension isn't in
+        // PATHEXT), so each command needs a native launcher per shell. Generate
+        // the trio npm uses: <name>.cmd (cmd.exe / PowerShell), <name>.ps1
+        // (PowerShell) and an extensionless sh script (Git Bash / MSYS).
+        writeShimTrio(name, name)
+        for (alias in aliases) {
+            writeShimTrio(alias, name)
+        }
 
         // TODO: add path automatically
         // This requires writing to the Windows registry
@@ -44,9 +43,29 @@ class Windows : Platform() {
     }
 
     override suspend fun uninstall(name: String) {
-        removeAliasSymlinks(name, ".bat")
+        val commandNames = listOf(name) + getAliases(name)
+        Promise
+            .all(
+                commandNames
+                    .flatMap { command -> listOf("$command.cmd", "$command.ps1", command) }
+                    .map { fileName -> Fs.rm(platformPath.join(climatScriptBin, fileName), jsObjectOf("force" to true)) }
+                    .toTypedArray(),
+            ).await()
         removeToolchain(name)
-        Fs.rm(getBatchFilePath(name)).await()
+    }
+
+    private suspend fun writeShimTrio(
+        fileName: String,
+        toolchainName: String,
+    ) {
+        Promise
+            .all(
+                arrayOf(
+                    Fs.writeFile(platformPath.join(climatScriptBin, "$fileName.cmd"), getCmdShim(toolchainName)),
+                    Fs.writeFile(platformPath.join(climatScriptBin, "$fileName.ps1"), getPs1Shim(toolchainName)),
+                    Fs.writeFile(platformPath.join(climatScriptBin, fileName), getShShim(toolchainName)),
+                ),
+            ).await()
     }
 
     override suspend fun purge() {
@@ -59,11 +78,11 @@ class Windows : Platform() {
             ).await()
     }
 
-    private fun getBatchFilePath(name: String): String = platformPath.join(climatScriptBin, "$name.bat")
-
     private companion object {
-        fun getBatchScript(name: String): String = "@echo off${EOL}climat runGlobal \"$name\" %*"
+        fun getCmdShim(name: String): String = "@echo off${EOL}climat runGlobal \"$name\" %*$EOL"
 
-        fun getAliasScript(name: String): String = "@echo off$EOL%~dp0$name %*"
+        fun getPs1Shim(name: String): String = "climat runGlobal \"$name\" @args${EOL}exit \$LASTEXITCODE$EOL"
+
+        fun getShShim(name: String): String = "#!/bin/sh${EOL}climat runGlobal \"$name\" \"\$@\"$EOL"
     }
 }

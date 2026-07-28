@@ -45,23 +45,23 @@ abstract class Platform {
         }
     }
 
+    protected suspend fun getAliases(name: String): List<String> =
+        parse(
+            Fs
+                .readFile(
+                    path = platformPath.join(toolchainHome, name, MAIN_MANIFEST_NAME),
+                    options = "utf8",
+                ).await()
+                .toString(),
+        ).aliases.map { it.name }
+
     protected suspend fun removeAliasSymlinks(
         name: String,
         nameSuffix: String = "",
     ) {
-        val toolchain =
-            parse(
-                Fs
-                    .readFile(
-                        path = platformPath.join(toolchainHome, name, MAIN_MANIFEST_NAME),
-                        options = "utf8",
-                    ).await()
-                    .toString(),
-            )
-        val aliases = toolchain.aliases.map { it.name }
         Promise
             .all(
-                aliases
+                getAliases(name)
                     .map { alias -> Fs.unlink(platformPath.join(climatScriptBin, alias + nameSuffix)) }
                     .toTypedArray(),
             ).await()

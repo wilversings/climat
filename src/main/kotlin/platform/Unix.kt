@@ -4,7 +4,6 @@ import com.climat.Fs
 import com.climat.Path
 import com.climat.jsObjectOf
 import kotlinx.coroutines.await
-import os.EOL
 import kotlin.js.Promise
 
 class Unix : Platform() {
@@ -61,6 +60,15 @@ class Unix : Platform() {
     }
 
     private companion object {
-        fun getScriptContent(name: String) = "#!/bin/bash$EOL${EOL}climat runGlobal \"$name\" \"$@\"$EOL"
+        // POSIX sh is present on every Unix (including Alpine/busybox and minimal
+        // containers), unlike bash, which the shim used to hard-code and which is
+        // absent on those systems. `exec` hands the shim's subprocess straight off
+        // to climat, so exit codes and signals propagate without an extra process.
+        fun getScriptContent(name: String) =
+            """
+            |#!/bin/sh
+            |exec climat runGlobal "$name" "$@"
+            |
+            """.trimMargin()
     }
 }
