@@ -67,6 +67,17 @@ re-running the build after editing a `.g4` file — don't hand-edit generated so
 - Valuable contributions: feature implementation, bugfixes, performance/architecture improvements, documentation,
   and unit/integration tests.
 
+## AI skill
+
+- `skill/SKILL.md` is an AI skill documenting how to *author `.cli` toolchains and drive the
+  `climat` CLI* (the DSL surface, parameters, interpolation/mappings, aliases, docstrings, and the
+  `install`/`run`/`exec`/`runGlobal`/`validate`/`list`/`uninstall`/`purge` commands).
+- **Keep it in sync.** Whenever a change affects the user-facing DSL or CLI — e.g. editing
+  `climatEngine/src/antlr/DslLexer.g4` / `DslParser.g4`, the CLI manifest in
+  `src/main/kotlin/Manifest.kt`, the `ClimatCli`/`AsyncClimatCli` command surface, validation
+  rules, or the `documentationExamples/*.cli` fixtures — update `skill/SKILL.md` in the same change
+  so it does not go stale.
+
 ## Notes / gotchas
 
 - This is a pre-release project ("Everything is subject to change") — expect API/DSL churn.
