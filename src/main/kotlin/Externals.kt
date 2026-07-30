@@ -57,6 +57,8 @@ external object Fs {
 
     fun pathExists(path: String): Promise<Boolean>
 
+    fun existsSync(path: String): Boolean
+
     fun symlink(
         target: String,
         path: String,

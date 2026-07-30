@@ -41,6 +41,10 @@ Generate powerful macros for your CLI tools with a simple and smart approach.
 npm i -g climat
 ```
 
+> **Windows:** CLiMAT runs `sh` actions through a POSIX shell. On Windows this is the `sh.exe` that
+> ships with [Git for Windows](https://git-scm.com/download/win), so it must be installed and `git`
+> must be on your `PATH`. CLiMAT fails fast with a clear error if it cannot be found.
+
 ## Usage
 
 Write your macro in `sgit.cli`

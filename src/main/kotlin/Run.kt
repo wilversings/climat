@@ -51,21 +51,34 @@ private fun execSyncOptions(): ExecSyncOptions {
     return options as ExecSyncOptions
 }
 
-// Git for Windows ships a POSIX sh and is the de-facto prerequisite for POSIX shell tooling there.
-// Locate it next to the `git` already on PATH, falling back to the default install location.
+// Git for Windows ships a POSIX sh and is a hard requirement for running `sh` actions on Windows.
+// Look for its sh.exe next to the `git` already on PATH, then at the default install location, and
+// crash with an actionable message if neither exists — a missing shell must fail loudly and early
+// rather than silently fall through to cmd.exe (which would mangle the POSIX quoting).
 private val windowsShell: String by lazy {
-    try {
-        val gitPath =
-            child_process
-                .execSync("where git")
-                .toString("utf8")
-                .lineSequence()
-                .map { it.trim() }
-                .first { it.isNotEmpty() } // e.g. C:\Program Files\Git\cmd\git.exe
-        Path.win32.join(Path.win32.dirname(Path.win32.dirname(gitPath)), "bin", "sh.exe")
-    } catch (ex: dynamic) {
-        "C:\\Program Files\\Git\\bin\\sh.exe"
+    val candidates = buildList {
+        try {
+            val gitPath =
+                child_process
+                    .execSync("where git")
+                    .toString("utf8")
+                    .lineSequence()
+                    .map { it.trim() }
+                    .first { it.isNotEmpty() } // e.g. C:\Program Files\Git\cmd\git.exe
+            add(Path.win32.join(Path.win32.dirname(Path.win32.dirname(gitPath)), "bin", "sh.exe"))
+        } catch (ex: dynamic) {
+            // `git` not on PATH; fall back to the default install location below.
+        }
+        add("C:\\Program Files\\Git\\bin\\sh.exe")
     }
+
+    candidates.firstOrNull { Fs.existsSync(it) }
+        ?: throw Exception(
+            "Running `sh` actions on Windows requires Git for Windows (it provides the sh.exe that " +
+                "climat shells out to), but it could not be found in any of: " +
+                candidates.joinToString(", ") + ". Install it from https://git-scm.com/download/win " +
+                "and make sure `git` is on your PATH.",
+        )
 }
 
 fun handleCustomScript(

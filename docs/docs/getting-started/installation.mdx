@@ -9,6 +9,9 @@ The main platform for CLiMAT is JavaScript
 ## Prerequisites
 * [NodeJS](https://nodejs.org/en/download/) >=13.2.0
 * NPM or any JavaScript package manager ([Yarn](https://classic.yarnpkg.com/lang/en/docs/install), [pnpm](https://pnpm.io/installation))
+* **On Windows only:** [Git for Windows](https://git-scm.com/download/win). CLiMAT runs `sh` actions
+  through a POSIX shell, and on Windows it uses the `sh.exe` bundled with Git for Windows. Make sure
+  `git` is on your `PATH` — CLiMAT will refuse to run a `sh` action if it cannot find it.
 
 Execute in the console:
 ```bash
